@@ -127,19 +127,6 @@ for(i in 1:nrow(df1)){
 				days_90=pub_date+days(90)
 				year_1=pub_date+years(1)}
 # Grab Author name
-# 			primary_author = xpathSApply(root, "//a[@property='foaf:name'][1]", xmlValue)
-# 			primary_author =  gsub("\n | By | Featuring", ' ', primary_author)
-# 			if (length(primary_author)==0){
-# 				primary_author = 0	}
-# 			primary_author=trimws(primary_author)
-# # Grab Co-author			
-# 			author_full = xpathSApply(root, "//div[@id='pub-authors']", xmlValue)
-# 			if (length(author_full)==0){
-# 				author_full = 0	}
-# 			author_full =  gsub("By", ' ', author_full)
-# 			author_full=as.character(author_full)
-# 			(author_full=trimws(author_full))
-# 			co_authored=ifelse((author_full==0)|(author_full==primary_author), FALSE, TRUE)
 #Grab Media type
 			type = gsub('www.cato.org*/|/.*', "\\1", df1$pagePath[i])
 			type = gsub('-', " ", type)
