@@ -15,11 +15,17 @@ if(!require(googleAnalyticsR)) install.packages("googleAnalyticsR")
 library(googleAnalyticsR)
 library(dplyr)
 library(httr)
+library(extrafont)
 library(RCurl)
 library(XML)
 library(lubridate)
 library(foreach)
 library(stringr)
+font_import('/Users/rorr/RStuff/Open_Sans')
+loadfonts()
+fonts()
+
+
 #library(googleAuthR)
 library(ggplot2)
 simpleCap <- function(x) {
@@ -40,7 +46,7 @@ ga_id <- account_list$viewId[1]
 #
 
 name="Vanessa Brown Calder"
-
+name=as.character(name)
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
@@ -89,12 +95,13 @@ get_data <- function(vid, from, to, dim, met, max) {
 		df$dimension1 <- NULL
 		df$author=name
 		df$co_authors = gsub(name, '', df$author_full)
-		df$co_authors=trimws(df1$co_authors)
+		df$co_authors=trimws(df$co_authors)
 		df$co_authors = gsub("^,*|(?<=,),|,*$", "", df$co_authors, perl=T)
-		df$collaboration=ifelse(length(df$co_authors==0), FALSE, TRUE)
+		df$collaboration_yn=ifelse(df$author==df$author_full, FALSE, TRUE)
 		df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 #######
+final_df= data.frame()
 df2 = data.frame()
 web_df= data.frame()
 df1 = gadata
@@ -102,7 +109,8 @@ rm(df)
 for(i in 1:nrow(df1)){
 			row_numb = i 
 			url=df1$pagePath[i]
-			url= gsub(pattern=".*https://",replacement="",x=url)
+#url='translate.googleusercontent.com/translate_c?depth=1&rurl=translate.google.com&sl=en&sp=nmt4&tl=es&u=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&usg=alkjrhjnz8bjtqobiwivud1l_tpkjx_w8q'
+			url= gsub(pattern=".*https://*|&usg=.*",replacement="",x=url)
 			html<-getURL(url,followlocation=TRUE)
 			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 			parsed=htmlParse(html)
@@ -118,6 +126,27 @@ for(i in 1:nrow(df1)){
 			body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
 			if (length(body_count)==0){
 				body_count = 0	}
+# Tags and Topics
+			# url=df1$pagePath[13]
+			# url= gsub(pattern=".*https://",replacement="",x=url)
+			# html<-getURL(url,followlocation=TRUE)
+			# html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
+			# parsed=htmlParse(html)
+			# root=xmlRoot(parsed)
+			tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
+			if (length(tags)==0){tags = 0	}
+			tags =  gsub("\n", ' ', tags)
+			tags=as.list(strsplit(tags, '\\,+')[[1]])
+			tags=trimws(as.list(tags))
+			tags=as.list(tags)
+			tags
+			topics = xpathSApply(root, "//div[@class='field-topics inline']", xmlValue)
+			if (length(topics)==0){topics = 0	} #else {topics=list(topics)}
+			topics =  gsub("\n", ' ', topics)
+			topics=as.list(strsplit(topics, '\\,+')[[1]])
+			topics=trimws(as.list(topics))
+			topics=as.list(topics)
+			topics
 # Grab Publication Date
 			pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
 			if (length(pub_date)==0){pub_date=0}
@@ -126,33 +155,60 @@ for(i in 1:nrow(df1)){
 				days_10=pub_date+days(10)
 				days_90=pub_date+days(90)
 				year_1=pub_date+years(1)}
-# Grab Author name
 #Grab Media type
-			type = gsub('www.cato.org*/|/.*', "\\1", df1$pagePath[i])
+			type = gsub('www.cato.org*/|/.*', "\\1", url)
 			type = gsub('-', " ", type)
-			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", df1$pagePath[i])
+			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
 			type_2 = gsub('-', " ", type_2)
 			type=ifelse((type=="publications"), type_2, type)
-			web_df=data.frame(title=title,type=type,primary_author=primary_author,pub_date=pub_date,
-																						row_numb=row_numb,body_count=body_count,author_full=author_full,co_authored=co_authored,
-																					days_90=days_90,year_1=year_1,days_10=days_10)
+			web_df=data.frame(title=title, type=type, pub_date=pub_date,
+																					row_numb=row_numb, body_count=body_count,
+																					tags=I(list(c(tags))),topics=I(list(c(topics))),
+																					#co_authors=co_authors, collaboration_yn=collaboration_yn,primary_author=primary_author,
+																					days_90=days_90, year_1=year_1, days_10=days_10)
 			df2 <- rbind(df2, web_df)
 }			
-df1 <- cbind(df1, df2)
-df1$days_aft_pub=(df1$obs_day-df1$pub_date)
+#Combine Dataframes into
+df_final <- cbind(df1, df2)
+
+df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
+df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
+df_final$type=as.character(df_final$type)
 
 str(df1)
-
-
 # Create time periods
-Recep_Quick=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
-Recep_Medium=subset(df1, (pub_date < obs_day) & (obs_day< days_90))
-Recep_Long=subset(df1, (pub_date < obs_day) & (obs_day< year_1))
+Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
+Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
+Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
 #Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
 
-days_90=pub_date+days(90)
-year_1=pub_date+years(1)
+### More significant analyses ###
+my_theme <- function(){
+	theme_light() +
+		theme(text = element_text(family = "OpenSans-Regular"),  
+								plot.title = element_text(size = 13, color = "gray30"),   # Set up the title style
+								plot.subtitle = element_text(size = 11, color = "black"), # Set up the subtitle style
+								plot.margin = unit(c(0.5,0,0,2.5), "cm"),                 # Add white space at the top and left
+								#panel.grid = element_blank(),
+								panel.border = element_blank(),
+								axis.title = element_blank(),
+								axis.ticks = element_blank(),
+								axis.text.x = element_blank(),
+								axis.text.y = element_text(size = 9, color = "gray10"))
+}
 
+
+df_final =subset(df_final, type != "events") # Remove events
+names(df_final)
+Bar_type_df <- df_final %>%
+	#group_by(unique(title)) %>%
+	distinct(type, title, pub_date) %>%
+	#Bar_type_df <- unique(Bar_type_df) %>%
+	mutate(type_count = n_distinct(type)/5)
+
+ggplot(data=Bar_type_df, aes(x=type, y=type_count)) +
+	geom_bar(stat="identity", width=0.5)+
+	my_theme()
 
 ### group mtcars by cylinders and return some averages
 cars <- df1 %>%
