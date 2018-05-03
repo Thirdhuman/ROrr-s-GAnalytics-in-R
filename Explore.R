@@ -21,11 +21,8 @@ library(XML)
 library(lubridate)
 library(foreach)
 library(stringr)
-font_import('/Users/rorr/RStuff/Open_Sans')
+font_import()
 loadfonts()
-fonts()
-
-
 #library(googleAuthR)
 library(ggplot2)
 simpleCap <- function(x) {
@@ -53,10 +50,9 @@ vid <- "3016983"
 from <- "2015-01-01"
 to   <- "2018-06-01"
 ## create filters on dimensions
-dimf <- dim_filter("countryIsoCode","EXACT","US",not = F)
 dimf2 <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
 fc2 <- filter_clause_ga4(list(dimf, dimf2), operator = "AND")
-max = 50000
+max = 5000000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
@@ -97,7 +93,7 @@ get_data <- function(vid, from, to, dim, met, max) {
 		df$co_authors = gsub(name, '', df$author_full)
 		df$co_authors=trimws(df$co_authors)
 		df$co_authors = gsub("^,*|(?<=,),|,*$", "", df$co_authors, perl=T)
-		df$collaboration_yn=ifelse(df$author==df$author_full, FALSE, TRUE)
+		df$collaboration_yn=ifelse(df$author==df$author_full, "Co-Authored", "Sole author")
 		df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 #######
@@ -109,7 +105,6 @@ rm(df)
 for(i in 1:nrow(df1)){
 			row_numb = i 
 			url=df1$pagePath[i]
-#url='translate.googleusercontent.com/translate_c?depth=1&rurl=translate.google.com&sl=en&sp=nmt4&tl=es&u=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&usg=alkjrhjnz8bjtqobiwivud1l_tpkjx_w8q'
 			url= gsub(pattern=".*https://*|&usg=.*",replacement="",x=url)
 			html<-getURL(url,followlocation=TRUE)
 			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
@@ -170,12 +165,12 @@ for(i in 1:nrow(df1)){
 }			
 #Combine Dataframes into
 df_final <- cbind(df1, df2)
-
+df_final$one=1
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
 df_final$type=as.character(df_final$type)
-
-str(df1)
+df_final$type= sapply(df_final$type, simpleCap)
+str(df_final)
 # Create time periods
 Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
 Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
@@ -185,30 +180,60 @@ Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
 ### More significant analyses ###
 my_theme <- function(){
 	theme_light() +
-		theme(text = element_text(family = "OpenSans-Regular"),  
-								plot.title = element_text(size = 13, color = "gray30"),   # Set up the title style
-								plot.subtitle = element_text(size = 11, color = "black"), # Set up the subtitle style
-								plot.margin = unit(c(0.5,0,0,2.5), "cm"),                 # Add white space at the top and left
-								#panel.grid = element_blank(),
-								panel.border = element_blank(),
+		theme(text = element_text(family = "Open Sans"),  
+								plot.title = element_text(size = 12, color = "gray30"),   # Set up the title style
+								plot.subtitle = element_text(size = 10, color = "black"), # Set up the subtitle style
+								plot.margin = unit(c(.1,.1,.1,.1), "cm"),                 # Add white space at the top and left
+								panel.grid = element_blank(),
+								#panel.border = element_blank(),
 								axis.title = element_blank(),
 								axis.ticks = element_blank(),
-								axis.text.x = element_blank(),
+								#axis.text.x = element_blank(),
 								axis.text.y = element_text(size = 9, color = "gray10"))
 }
-
-
-df_final =subset(df_final, type != "events") # Remove events
 names(df_final)
-Bar_type_df <- df_final %>%
-	#group_by(unique(title)) %>%
-	distinct(type, title, pub_date) %>%
-	#Bar_type_df <- unique(Bar_type_df) %>%
-	mutate(type_count = n_distinct(type)/5)
 
-ggplot(data=Bar_type_df, aes(x=type, y=type_count)) +
+#Bar plot
+Bar_type_df =subset(df_final, type != "Events") # Remove events
+Bar_type_df <- Bar_type_df %>%
+	distinct(type, title, collaboration_yn, one)
+title_name=sprintf("%s's Content Breakdown", name)
+ggplot(data=Bar_type_df, aes(x=type, y=one, fill=collaboration_yn)) +
+	ggtitle(sprintf("%s's Content Breakdown ", name),  # Add the title and subtitle
+									subtitle = sprintf("\n Total Content: %s", sum(Bar_type_df$one))) +
 	geom_bar(stat="identity", width=0.5)+
-	my_theme()
+	my_theme()+
+	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
+
+#Time per Article
+Audience_Captivation =subset(df_final, type != "Events" & type != "Multimedia") # Remove Events and Multimedia
+Audience_Captivation <- aggregate(avg_MinPerWord ~ title, Audience_Captivation, mean)
+Happy_audience=filter(Audience_Captivation, row_number((avg_MinPerWord)) <= 10)
+Happy_audience <- Happy_audience %>% arrange(avg_MinPerWord)
+Happy_audience$title<-factor(Happy_audience$title,
+																																		levels=Happy_audience$title[order(Happy_audience$avg_MinPerWord)])
+ggplot(data=Happy_audience, aes(x=title, y=avg_MinPerWord)) +
+	ggtitle(sprintf("10 Best Audience Attrition", name)
+									,subtitle = "Time Spent per Word in Aticle Text" ) +
+	geom_bar(stat="identity", width=0.5)+
+	coord_flip() + my_theme()+ theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
+
+# Sad Audience
+sad_audience<-filter(Audience_Captivation, row_number(-avg_MinPerWord) <= 10)
+sad_audience <- sad_audience %>% arrange(avg_MinPerWord)
+sad_audience$title<-factor(sad_audience$title,
+																													levels=sad_audience$title[order(sad_audience$avg_MinPerWord)])
+
+
+ggplot(data=sad_audience, aes(x=title, y=avg_MinPerWord)) +
+	ggtitle(sprintf("10 Worst Audience Attrition", name)
+									,subtitle = "Time Spent per Word in Aticle Text" 	) +
+	geom_bar(stat="identity", width=0.5)+
+	coord_flip() +
+	my_theme()+
+	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
+
+
 
 ### group mtcars by cylinders and return some averages
 cars <- df1 %>%
