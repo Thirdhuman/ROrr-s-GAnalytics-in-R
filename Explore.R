@@ -65,7 +65,7 @@ fc2 <- filter_clause_ga4(list(dimf
 																														), operator = "AND")
 
 ## Specify Search terms
-max = 10
+max = 10000000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
@@ -88,7 +88,7 @@ get_data <- function(vid, from, to, dim, met, max) {
                          #met_filters = fc, 
                          dim_filters = fc2, 
                          max = max
-  																							,anti_sample = T)
+  																							,anti_sample = TRUE)
   # clean up and set class
   df[,1] <- gsub(" / ", "/", df[,1])              # remove spacing
   df[,1] <- gsub(":?(NA|CLICK|NA):?", "", df[,1]) # remove CLICK and NA
@@ -112,8 +112,6 @@ df_final= data.frame()
 df2 = data.frame()
 web_df= data.frame()
 #df1$date <- NULL
-
-rm(df)
 for(i in 1:nrow(df1)){
 			row_numb = i 
 			url=df1$pagePath[i]
@@ -171,7 +169,7 @@ for(i in 1:nrow(df1)){
 #Combine Initial Loop of  into
 df_intermediate <- cbind(df1, df2)
 
-## Top Terms ##
+# Extract web content from Cato Website
 df3= data.frame()
 text_content <- df_intermediate %>%
 	distinct(pagePath, title, type)
@@ -192,7 +190,7 @@ body =  gsub("\n", ' ', body)
 body=trimws(body)
 if (length(body)==0){body = 0	}
 # Text Analysis			
-if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
+#if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
 body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
 if (length(body_count)==0){body_count = 0	}
 # Tags and Topics
@@ -215,10 +213,19 @@ content_df=data.frame(
 																		)
 df3 <- rbind(df3, content_df)
 }
+# Text Analysis	- Generate Text Wall	
+test_wall <- df3 %>%
+	distinct(title, body,tags)
+test_wall=test_wall[!duplicated(test_wall),]
+for(i in 1:nrow(text_content)){
+if (i==1){save_docs=paste(test_wall$title[i],test_wall$body[i],test_wall$tags[i])}
+	else{save_docs = paste(save_docs,test_wall$title[i],test_wall$body[i],test_wall$tags[i])}
+}
+str(save_docs)
+
 text_stats <- cbind(text_content, df3)
 text_stats$row_count = NULL
-
-### Text Analysis
+## Text Analysis - Top Terms ##
 for(k in 1:nrow(text_stats)){
 	keywords_doc = paste(text_stats$title[k],text_stats$body[k],text_stats$tags[k])
 	keywords_doc=Corpus(VectorSource(keywords_doc))
@@ -235,16 +242,16 @@ for(k in 1:nrow(text_stats)){
 	keywords_doc <- tm_map(keywords_doc, removeWords, c("the", "can",'did','like', 'and')) 
 	dtm <- DocumentTermMatrix(keywords_doc)
 	dtm <- removeSparseTerms(dtm, 0.96)
-	top_terms=findMostFreqTerms(dtm, n = 10L)
+	top_terms=findMostFreqTerms(dtm, n = 20L)
 	top_terms=as.data.frame(do.call(rbind, top_terms))
 	text_stats$top_terms[k]=paste(colnames(top_terms)[1:10],sep="|-|", collapse=", ")
 	}
 ## Generate Author's Custom Categories ##
 unique(text_stats$top_terms[1:8])
-category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building'  )
+category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
 category_2=c('women', 'family', 'leave','gender','gap')
 #category_3=c('women', 'family', 'leave','gender','gap')
-#category_3=c('women', 'family', 'leave','gender','gap')
+#category_4=c('women', 'family', 'leave','gender','gap')
 
 ## Generate 
 text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
@@ -263,15 +270,10 @@ Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
 Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
 #Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
 
-
-
-#docs=Corpus(VectorSource(save_docs))
-
+docs=Corpus(VectorSource(save_docs))
 
 ## Qualitative Text Analyses ##
-
-
-#Primary WordCloud
+# Primary WordCloud #
 doc <- Corpus(VectorSource(paste(text_stats$body,text_stats$tags,text_stats$title)))
 doc <- tm_map(doc, removeNumbers)
 doc <- tm_map(doc, tolower)
