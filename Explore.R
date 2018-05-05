@@ -6,6 +6,9 @@
 
 #Intro to text analysis
 #https://www.r-bloggers.com/intro-to-text-analysis-with-r/
+# Fonts
+font_import()
+loadfonts()
 
 
 getwd()
@@ -30,24 +33,11 @@ library(topicmodels)
 library(ggplot2)
 library(quanteda)
 library(class)
-# Fonts
-font_import()
-loadfonts()
 # Functions
 simpleCap <- function(x) {s <- strsplit(x, " ")[[1]]paste(toupper(substring(s, 1,1)), substring(s, 2),sep="", collapse=" ")}
 toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
 toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
 is.valid <- function(x) {	require(shiny)	is.null(need(x, message = FALSE))  }
-bigram <- function(xs){
-		if (length(xs) >= 2) 
-			c(paste(xs[seq(2)],collapse='_'),bigram(tail(xs,-1)))
-}
-BigramTokenizer <- function(x) { 
-	unlist(
-		lapply(ngrams(words(x), 2), paste, collapse = " "), 
-		use.names = FALSE
-	) 
-}
 
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
@@ -65,10 +55,9 @@ name=as.character(name)
 vid <- "3016983"
 # date range
 from <- "2016-07-01"
-to   <- "2018-06-01"
+to   <- current_date
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
-
 dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
 fc2 <- filter_clause_ga4(list(dimf
 																														#,dimf2
@@ -102,14 +91,7 @@ get_data <- function(vid, from, to, dim, met, max) {
   # clean up and set class
   df[,1] <- gsub(" / ", "/", df[,1])              # remove spacing
   df[,1] <- gsub(":?(NA|CLICK|NA):?", "", df[,1]) # remove CLICK and NA
-  #df[,2] <- as.numeric(df[,2])                    # conversion column is character :-/
-  #df$page_name <- sapply(df$pagePath, basename)
-  #df$page_name= gsub("-", ' ', df$page_name)
-  #df$page_name= sapply(df$page_name, simpleCap)
-  refcols <- c("obs_day") 
-  df$obs_day=ymd(df$date)
-  df <- df[, c(refcols, setdiff(names(df), refcols))]
-		df$date <- NULL
+  #df$obs_day=ymd(df$date)
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
 		df$author_full=df$dimension1
 		df$dimension1 <- NULL
@@ -121,10 +103,15 @@ get_data <- function(vid, from, to, dim, met, max) {
 		df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 #######
+refcols <- c("obs_day") 
+df1 = gadata
+df1$obs_day=ymd(df1$date)
+df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
 df_final= data.frame()
 df2 = data.frame()
 web_df= data.frame()
-df1 = gadata
+#df1$date <- NULL
+
 rm(df)
 for(i in 1:nrow(df1)){
 			row_numb = i 
