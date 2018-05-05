@@ -6,38 +6,39 @@
 
 #Intro to text analysis
 #https://www.r-bloggers.com/intro-to-text-analysis-with-r/
+
 # Fonts
 font_import()
 loadfonts()
 
-
 getwd()
-#setwd('/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)')
-# This installs googleAnalyticsR if you haven't got it installed already
+# My Packages
 if(!require(googleAnalyticsR)) install.packages("googleAnalyticsR")
-#library("tidyverse")
 library(googleAnalyticsR)
 library(dplyr)
 library(httr)
 library(extrafont)
 library(RCurl)
 library(XML)
-library(lubridate)
 library(foreach)
 library(stringr)
 library(tm)
 library(SnowballC)
 library(wordcloud)
-library(RColorBrewer)
 library(topicmodels)
 library(ggplot2)
 library(quanteda)
 library(class)
+library(lubridate)
+
 # Functions
-simpleCap <- function(x) {s <- strsplit(x, " ")[[1]]paste(toupper(substring(s, 1,1)), substring(s, 2),sep="", collapse=" ")}
+simpleCap <- function(x) {
+	s <- strsplit(x, " ")[[1]]
+	if (!is.na(s[1])) {
+		return(paste(toupper(substring(s, 1, 1)), substring(s, 2), sep = "", collapse = " "))} else {
+		return(NA)}}
 toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
 toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
-is.valid <- function(x) {	require(shiny)	is.null(need(x, message = FALSE))  }
 
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
@@ -55,7 +56,7 @@ name=as.character(name)
 vid <- "3016983"
 # date range
 from <- "2016-07-01"
-to   <- current_date
+to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
 dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
@@ -64,7 +65,7 @@ fc2 <- filter_clause_ga4(list(dimf
 																														), operator = "AND")
 
 ## Specify Search terms
-max = 10000000
+max = 10
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
@@ -87,7 +88,7 @@ get_data <- function(vid, from, to, dim, met, max) {
                          #met_filters = fc, 
                          dim_filters = fc2, 
                          max = max
-  																							,anti_sample = TRUE)
+  																							,anti_sample = T)
   # clean up and set class
   df[,1] <- gsub(" / ", "/", df[,1])              # remove spacing
   df[,1] <- gsub(":?(NA|CLICK|NA):?", "", df[,1]) # remove CLICK and NA
@@ -124,29 +125,29 @@ for(i in 1:nrow(df1)){
 # Generate Title
 			title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
 			if (length(title)==0){title = 0	}
-# Manipulate Body for Text Analyses			
-			body = xpathSApply(root, "//div[@class='field-body'][1]", xmlValue)
-			body =  gsub('\nNotes\n.*', '', body)
-			body =  gsub("\n", ' ', body)
-			body=trimws(body)
-			if (length(body)==0){body = 0	}
-# Text Analysis			
-			if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
-			body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
-			if (length(body_count)==0){body_count = 0	}
-# Tags and Topics
-			tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
-			if (length(tags)==0){tags = 0	}
-			tags =  gsub("\n", ' ', tags)
-			tags=as.list(strsplit(tags, '\\,+')[[1]])
-			tags=trimws(as.list(tags))
-			tags=as.list(tags)
-			topics = xpathSApply(root, "//div[@class='field-topics inline']", xmlValue)
-			if (length(topics)==0){topics = 0	} #else {topics=list(topics)}
-			topics =  gsub("\n", ' ', topics)
-			topics=as.list(strsplit(topics, '\\,+')[[1]])
-			topics=trimws(as.list(topics))
-			topics=as.list(topics)
+# # Manipulate Body for Text Analyses			
+# 			body = xpathSApply(root, "//div[@class='field-body'][1]", xmlValue)
+# 			body =  gsub('\nNotes\n.*', '', body)
+# 			body =  gsub("\n", ' ', body)
+# 			body=trimws(body)
+# 			if (length(body)==0){body = 0	}
+# # Text Analysis			
+# 			if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
+# 			body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
+# 			if (length(body_count)==0){body_count = 0	}
+# # Tags and Topics
+# 			tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
+# 			if (length(tags)==0){tags = 0	}
+# 			tags =  gsub("\n", ' ', tags)
+# 			tags=as.list(strsplit(tags, '\\,+')[[1]])
+# 			tags=trimws(as.list(tags))
+# 			tags=as.list(tags)
+# 			topics = xpathSApply(root, "//div[@class='field-topics inline']", xmlValue)
+# 			if (length(topics)==0){topics = 0	} #else {topics=list(topics)}
+# 			topics =  gsub("\n", ' ', topics)
+# 			topics=as.list(strsplit(topics, '\\,+')[[1]])
+# 			topics=trimws(as.list(topics))
+# 			topics=as.list(topics)
 # Grab Publication Date
 			pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
 			if (length(pub_date)==0){pub_date=0}
@@ -161,54 +162,63 @@ for(i in 1:nrow(df1)){
 			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
 			type_2 = gsub('-', " ", type_2)
 			type=ifelse((type=="publications"), type_2, type)
-			web_df=data.frame(title=title, type=type, pub_date=pub_date,
-																					row_numb=row_numb, body_count=body_count, 
-																					body=body,
-																					tags=I(list(c(tags))),topics=I(list(c(topics))),
-																					#co_authors=co_authors, collaboration_yn=collaboration_yn,primary_author=primary_author,
+			web_df=data.frame(title=title, type=type, pub_date=pub_date,row_numb=row_numb, 
+																					#body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))),
+																					#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
 																					days_90=days_90, year_1=year_1, days_10=days_10)
 			df2 <- rbind(df2, web_df)
 }			
-#Combine Dataframes into
-df_final <- cbind(df1, df2)
-df_final$one=1
-df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
-df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
-df_final$type=as.character(df_final$type)
-# Create time periods
-Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
-Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
-Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
-#Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
-
-#docs=Corpus(VectorSource(save_docs))
-
-## Qualitative Text Analyses ##
-#Primary WordCloud
-doc <- Corpus(VectorSource(paste(text_stats$body,text_stats$tags,text_stats$title)))
-doc <- tm_map(doc, removeNumbers)
-doc <- tm_map(doc, tolower)
-doc <- tm_map(doc, stripWhitespace)
-doc <- tm_map(doc, removePunctuation)
-doc <- tm_map(doc, PlainTextDocument)
-doc <- tm_map(doc, stemDocument)
-# creating of document matrix
-tdm <- TermDocumentMatrix(keywords_doc)
-m <- as.matrix(tdm)
-v <- sort(rowSums(m),decreasing=TRUE)
-d <- data.frame(word = names(v),freq=v)
-head(d, 10)
-set.seed(12)
-wordcloud(words = d$word, freq = d$freq, min.freq = 3,
-										max.words=200, 
-										random.order = FALSE,rot.per=.35,vfont=c("sans serif","plain"),
-										colors=brewer.pal(8, "Dark2"))
-
+#Combine Initial Loop of  into
+df_intermediate <- cbind(df1, df2)
 
 ## Top Terms ##
-text_stats <- df_final %>%
-	distinct(body, title, tags, topics, type)
-text_stats=text_stats[!duplicated(text_stats),]
+df3= data.frame()
+text_content <- df_intermediate %>%
+	distinct(pagePath, title, type)
+text_content=text_content[!duplicated(text_content),]
+
+for(i in 1:nrow(text_content)){
+	row_count = i
+	url=text_content$pagePath[i]
+	url= gsub(pattern=".*https://*|&usg=.*",replacement="",x=url)
+	html<-getURL(url,followlocation=TRUE)
+	html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
+	parsed=htmlParse(html)
+	root=xmlRoot(parsed)
+# Manipulate Body for Text Analyses			
+body = xpathSApply(root, "//div[@class='field-body'][1]", xmlValue)
+body =  gsub('\nNotes\n.*', '', body)
+body =  gsub("\n", ' ', body)
+body=trimws(body)
+if (length(body)==0){body = 0	}
+# Text Analysis			
+if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
+body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
+if (length(body_count)==0){body_count = 0	}
+# Tags and Topics
+tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
+if (length(tags)==0){tags = 0	}
+tags =  gsub("\n", ' ', tags)
+tags=as.list(strsplit(tags, '\\,+')[[1]])
+tags=trimws(as.list(tags))
+tags=as.list(tags)
+topics = xpathSApply(root, "//div[@class='field-topics inline']", xmlValue)
+if (length(topics)==0){topics = 0	} #else {topics=list(topics)}
+topics =  gsub("\n", ' ', topics)
+topics=as.list(strsplit(topics, '\\,+')[[1]])
+topics=trimws(as.list(topics))
+topics=as.list(topics)
+content_df=data.frame(
+																		#title=title, type=type, pub_date=pub_date,row_count=row_count, days_90=days_90, year_1=year_1, days_10=days_10
+																		body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics)))
+																		#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
+																		)
+df3 <- rbind(df3, content_df)
+}
+text_stats <- cbind(text_content, df3)
+text_stats$row_count = NULL
+
+### Text Analysis
 for(k in 1:nrow(text_stats)){
 	keywords_doc = paste(text_stats$title[k],text_stats$body[k],text_stats$tags[k])
 	keywords_doc=Corpus(VectorSource(keywords_doc))
@@ -229,15 +239,57 @@ for(k in 1:nrow(text_stats)){
 	top_terms=as.data.frame(do.call(rbind, top_terms))
 	text_stats$top_terms[k]=paste(colnames(top_terms)[1:10],sep="|-|", collapse=", ")
 	}
+## Generate Author's Custom Categories ##
 unique(text_stats$top_terms[1:8])
-housing=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building'  )
-women=c('women', 'family', 'leave','gender','gap')
-text_stats$VBC_Issues=ifelse(grepl(paste(housing, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
-											ifelse(grepl(paste(women, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues","Other"))
+category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building'  )
+category_2=c('women', 'family', 'leave','gender','gap')
+#category_3=c('women', 'family', 'leave','gender','gap')
+#category_3=c('women', 'family', 'leave','gender','gap')
 
-text_stats$VBC_Issues=ifelse(grepl(paste(women, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
- 				,ifelse(grepl(paste(housing, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$VBC_Issues))
+## Generate 
+text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
+											ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues","Other"))
+
+text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
+ 				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$VBC_Issues))
 df_final=merge(df_final, text_stats)
+
+df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
+df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
+df_final$type=as.character(df_final$type)
+# Create time periods
+Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
+Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
+Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
+#Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
+
+
+
+#docs=Corpus(VectorSource(save_docs))
+
+
+## Qualitative Text Analyses ##
+
+
+#Primary WordCloud
+doc <- Corpus(VectorSource(paste(text_stats$body,text_stats$tags,text_stats$title)))
+doc <- tm_map(doc, removeNumbers)
+doc <- tm_map(doc, tolower)
+doc <- tm_map(doc, stripWhitespace)
+doc <- tm_map(doc, removePunctuation)
+doc <- tm_map(doc, PlainTextDocument)
+doc <- tm_map(doc, stemDocument)
+# creating of document matrix
+tdm <- TermDocumentMatrix(keywords_doc)
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+set.seed(12)
+wordcloud(words = d$word, freq = d$freq, min.freq = 3,
+										max.words=200, 
+										random.order = FALSE,rot.per=.35,vfont=c("sans serif","plain"),
+										colors=brewer.pal(8, "Dark2"))
 
 ### Quantitative Analyses ###
 my_theme <- function(){
