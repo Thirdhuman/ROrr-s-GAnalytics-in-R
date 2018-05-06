@@ -116,29 +116,6 @@ url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=ur
 # Generate Title
 			title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
 			if (length(title)==0){title = 0	}
-# # Manipulate Body for Text Analyses			
-# 			body = xpathSApply(root, "//div[@class='field-body'][1]", xmlValue)
-# 			body =  gsub('\nNotes\n.*', '', body)
-# 			body =  gsub("\n", ' ', body)
-# 			body=trimws(body)
-# 			if (length(body)==0){body = 0	}
-# # Text Analysis			
-# 			if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
-# 			body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
-# 			if (length(body_count)==0){body_count = 0	}
-# # Tags and Topics
-# 			tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
-# 			if (length(tags)==0){tags = 0	}
-# 			tags =  gsub("\n", ' ', tags)
-# 			tags=as.list(strsplit(tags, '\\,+')[[1]])
-# 			tags=trimws(as.list(tags))
-# 			tags=as.list(tags)
-# 			topics = xpathSApply(root, "//div[@class='field-topics inline']", xmlValue)
-# 			if (length(topics)==0){topics = 0	} #else {topics=list(topics)}
-# 			topics =  gsub("\n", ' ', topics)
-# 			topics=as.list(strsplit(topics, '\\,+')[[1]])
-# 			topics=trimws(as.list(topics))
-# 			topics=as.list(topics)
 # Grab Publication Date
 			pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
 			if (length(pub_date)==0){pub_date=0}
@@ -151,7 +128,8 @@ url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=ur
 			web_df=data.frame(title=title, type=type, pub_date=pub_date,row_numb=row_numb, 
 																					#body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))),
 																					#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
-																					days_90=days_90, year_1=year_1, days_10=days_10)
+																					#days_90=days_90, year_1=year_1, days_10=days_10
+																					)
 			df2 <- rbind(df2, web_df)
 }			
 #Combine Initial Loop of  into
@@ -166,7 +144,7 @@ text_content=text_content[!duplicated(text_content),]
 for(i in 1:nrow(text_content)){
 	row_count = i
 	url=text_content$pagePath[i]
-	url= gsub(pattern=".*https://*|&*",replacement="",x=url)
+	url= gsub(pattern=".*https://*|&.*",replacement="",x=url)
 	url= gsub(pattern=".*genius.it*|&type=.*",replacement="",x=url)
 	url= gsub(pattern=".*www-cato-org.*",replacement="www.cato.org",x=url)
 	html<-getURL(url,followlocation=TRUE)
