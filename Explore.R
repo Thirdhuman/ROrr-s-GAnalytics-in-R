@@ -13,7 +13,6 @@ loadfonts()
 
 getwd()
 # My Packages
-if(!require(googleAnalyticsR)) install.packages("googleAnalyticsR")
 library(googleAnalyticsR)
 library(dplyr)
 library(httr)
@@ -22,13 +21,7 @@ library(RCurl)
 library(XML)
 library(foreach)
 library(stringr)
-library(tm)
-library(SnowballC)
-library(wordcloud)
-library(topicmodels)
 library(ggplot2)
-library(quanteda)
-library(class)
 library(lubridate)
 
 # Functions
@@ -65,7 +58,7 @@ fc2 <- filter_clause_ga4(list(dimf
 																														), operator = "AND")
 
 ## Specify Search terms
-max = 10000000
+max = 1000000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
@@ -81,17 +74,10 @@ dim = c(
 # the function
 df2 = data.frame()
 get_data <- function(vid, from, to, dim, met, max) {
-  df <- google_analytics(viewId = vid, 
-                         date_range = c(from, to), 
-                         metrics = met, 
-                         dimensions = dim,
-                         #met_filters = fc, 
-                         dim_filters = fc2, 
-                         max = max
-  																							,anti_sample = TRUE)
+  df <- google_analytics(viewId = vid, date_range = c(from, to), metrics = met,  dimensions = dim,
+              #met_filters = fc, 
+               dim_filters = fc2,  max = max	,anti_sample = TRUE)
   # clean up and set class
-  df[,1] <- gsub(" / ", "/", df[,1])              # remove spacing
-  df[,1] <- gsub(":?(NA|CLICK|NA):?", "", df[,1]) # remove CLICK and NA
   #df$obs_day=ymd(df$date)
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
 		df$author_full=df$dimension1
@@ -103,6 +89,7 @@ get_data <- function(vid, from, to, dim, met, max) {
 		df$collaboration_yn=ifelse(df$author==df$author_full, "Co-Authored", "Sole author")
 		df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
+str(gadata)
 #######
 refcols <- c("obs_day") 
 df1 = gadata
@@ -111,11 +98,17 @@ df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
 df_final= data.frame()
 df2 = data.frame()
 web_df= data.frame()
+names()
+unique(df1$obs_day)
 #df1$date <- NULL
 for(i in 1:nrow(df1)){
 			row_numb = i 
 			url=df1$pagePath[i]
-			url= gsub(pattern=".*https://*|&usg=.*",replacement="",x=url)
+url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=url&query=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&from=en&to=zh&token=&monlang=zh'
+			url= gsub(pattern=".*https://*|&.*","",x=url)
+			url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
+			url= gsub(pattern=".*www-cato-org.*|&.*",replacement="www.cato.org",x=url)
+			url
 			html<-getURL(url,followlocation=TRUE)
 			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 			parsed=htmlParse(html)
@@ -149,11 +142,6 @@ for(i in 1:nrow(df1)){
 # Grab Publication Date
 			pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
 			if (length(pub_date)==0){pub_date=0}
-			if (pub_date!=0){
-				pub_date=ymd(pub_date)
-				days_10=pub_date+days(10)
-				days_90=pub_date+days(90)
-				year_1=pub_date+years(1)}
 #Grab Media type
 			type = gsub('www.cato.org*/|/.*', "\\1", url)
 			type = gsub('-', " ", type)
@@ -178,7 +166,9 @@ text_content=text_content[!duplicated(text_content),]
 for(i in 1:nrow(text_content)){
 	row_count = i
 	url=text_content$pagePath[i]
-	url= gsub(pattern=".*https://*|&usg=.*",replacement="",x=url)
+	url= gsub(pattern=".*https://*|&*",replacement="",x=url)
+	url= gsub(pattern=".*genius.it*|&type=.*",replacement="",x=url)
+	url= gsub(pattern=".*www-cato-org.*",replacement="www.cato.org",x=url)
 	html<-getURL(url,followlocation=TRUE)
 	html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 	parsed=htmlParse(html)
@@ -221,7 +211,11 @@ for(i in 1:nrow(text_content)){
 if (i==1){save_docs=paste(test_wall$title[i],test_wall$body[i],test_wall$tags[i])}
 	else{save_docs = paste(save_docs,test_wall$title[i],test_wall$body[i],test_wall$tags[i])}
 }
-str(save_docs)
+
+library(tm)
+library(wordcloud)
+library(topicmodels)
+library(quanteda)
 
 text_stats <- cbind(text_content, df3)
 text_stats$row_count = NULL
@@ -244,10 +238,10 @@ for(k in 1:nrow(text_stats)){
 	dtm <- removeSparseTerms(dtm, 0.96)
 	top_terms=findMostFreqTerms(dtm, n = 20L)
 	top_terms=as.data.frame(do.call(rbind, top_terms))
-	text_stats$top_terms[k]=paste(colnames(top_terms)[1:10],sep="|-|", collapse=", ")
+	text_stats$top_terms[k]=paste(colnames(top_terms)[1:15],sep="|-|", collapse=", ")
 	}
 ## Generate Author's Custom Categories ##
-unique(text_stats$top_terms[1:8])
+unique(text_stats$top_terms[1:12])
 category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
 category_2=c('women', 'family', 'leave','gender','gap')
 #category_3=c('women', 'family', 'leave','gender','gap')
@@ -258,19 +252,30 @@ text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text
 											ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues","Other"))
 
 text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
- 				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$VBC_Issues))
-df_final=merge(df_final, text_stats)
+ 				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
+
+df_final=merge(df_intermediate, text_stats)
+df_final<-df_final[!(df_final$type=="cc.bingj.com"),]
 
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
 df_final$type=as.character(df_final$type)
+
+### Generate time period dates ###
 # Create time periods
 Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
 Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
 Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
 #Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
+if (pub_date!=0){
+	pub_date=ymd(pub_date)}
 
+days_10=pub_date+days(10)
+days_90=pub_date+days(90)
+year_1=pub_date+years(1)
 docs=Corpus(VectorSource(save_docs))
+
+save(df_final, file = "GA_VBC(5-5-18).RData")
 
 ## Qualitative Text Analyses ##
 # Primary WordCloud #
