@@ -104,10 +104,13 @@ unique(df1$obs_day)
 for(i in 1:nrow(df1)){
 			row_numb = i 
 			url=df1$pagePath[i]
-url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=url&query=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&from=en&to=zh&token=&monlang=zh'
+			#url='www.cato.org/blog/lack-zoning-not-houstons-problem?goal=0_395878584c-1af3773aff-143016961&mc_cid=1af3773aff&mc_eid=3fd7404a34'
+			#url='www-cato-org.myaccess.library.utoronto.ca/blog/race-amazon-headquarters-should-be-race-reform-zoning'
+			#url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=url&query=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&from=en&to=zh&token=&monlang=zh'
 			url= gsub(pattern=".*https://*|&.*","",x=url)
+			url= gsub(pattern="[?].*","",x=url)
 			url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
-			url= gsub(pattern=".*www-cato-org.*|&.*",replacement="www.cato.org",x=url)
+			url= gsub(pattern=".*www-cato-org.myaccess.library.utoronto.ca",replacement="www.cato.org",x=url)
 			url
 			html<-getURL(url,followlocation=TRUE)
 			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
@@ -125,7 +128,7 @@ url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=ur
 			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
 			type_2 = gsub('-', " ", type_2)
 			type=ifelse((type=="publications"), type_2, type)
-			web_df=data.frame(title=title, type=type, pub_date=pub_date,row_numb=row_numb, 
+			web_df=data.frame(title=title, type=type, pub_date=pub_date,row_numb=row_numb 
 																					#body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))),
 																					#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
 																					#days_90=days_90, year_1=year_1, days_10=days_10
@@ -134,6 +137,8 @@ url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=ur
 }			
 #Combine Initial Loop of  into
 df_intermediate <- cbind(df1, df2)
+df_intermediate<-df_intermediate[!(df_intermediate$type=="cc.bingj.com"),]
+
 
 # Extract web content from Cato Website
 df3= data.frame()
@@ -144,9 +149,10 @@ text_content=text_content[!duplicated(text_content),]
 for(i in 1:nrow(text_content)){
 	row_count = i
 	url=text_content$pagePath[i]
-	url= gsub(pattern=".*https://*|&.*",replacement="",x=url)
-	url= gsub(pattern=".*genius.it*|&type=.*",replacement="",x=url)
-	url= gsub(pattern=".*www-cato-org.*",replacement="www.cato.org",x=url)
+	url= gsub(pattern=".*https://*|&.*","",x=url)
+	url= gsub(pattern="[?].*","",x=url)
+	url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
+	url= gsub(pattern=".*www-cato-org.myaccess.library.utoronto.ca",replacement="www.cato.org",x=url)
 	html<-getURL(url,followlocation=TRUE)
 	html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 	parsed=htmlParse(html)
@@ -233,7 +239,8 @@ text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text
  				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
 
 df_final=merge(df_intermediate, text_stats)
-df_final<-df_final[!(df_final$type=="cc.bingj.com"),]
+
+save(df_final, file = "GA_VBC(5-6-18).RData")
 
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
@@ -252,8 +259,6 @@ days_10=pub_date+days(10)
 days_90=pub_date+days(90)
 year_1=pub_date+years(1)
 docs=Corpus(VectorSource(save_docs))
-
-save(df_final, file = "GA_VBC(5-5-18).RData")
 
 ## Qualitative Text Analyses ##
 # Primary WordCloud #
