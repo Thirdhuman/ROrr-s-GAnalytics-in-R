@@ -86,7 +86,8 @@ get_data <- function(vid, from, to, dim, met, max) {
 		df$co_authors = gsub(name, '', df$author_full)
 		df$co_authors=trimws(df$co_authors)
 		df$co_authors = gsub("^,*|(?<=,),|,*$", "", df$co_authors, perl=T)
-		df$collaboration_yn=ifelse(df$author==df$author_full, "Co-Authored", "Sole author")
+		df$collaboration_yn=ifelse(df$author!=df$author_full & length(df$author_full)!=0, "Co-Authored",
+																					 ifelse(df$author==df$author_full, "Sole author",0))
 		df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 str(gadata)
@@ -188,12 +189,12 @@ content_df=data.frame(
 df3 <- rbind(df3, content_df)
 }
 # Text Analysis	- Generate Text Wall	
-test_wall <- df3 %>%
+text_wall <- df3 %>%
 	distinct(title, body,tags)
-test_wall=test_wall[!duplicated(test_wall),]
+text_wall=text_wall[!duplicated(text_wall),]
 for(i in 1:nrow(text_content)){
-if (i==1){save_docs=paste(test_wall$title[i],test_wall$body[i],test_wall$tags[i])}
-	else{save_docs = paste(save_docs,test_wall$title[i],test_wall$body[i],test_wall$tags[i])}
+if (i==1){save_docs=paste(text_wall$title[i],text_wall$body[i],as.character(text_wall$tags[i]))}
+	else{save_docs = paste(save_docs,text_wall$title[i],text_wall$body[i],as.character(text_wall$tags[i]))}
 }
 
 library(tm)
@@ -239,47 +240,59 @@ text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text
  				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
 
 df_final=merge(df_intermediate, text_stats)
+df_final=df_final[!is.na(df_final$title),]
 
-save(df_final, file = "GA_VBC(5-6-18).RData")
-
-df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
 df_final$type=as.character(df_final$type)
+df_final$one=1
+df_final$co_authors=gsub(', , ', ', ', df_final$co_authors)
+
+df_final$pub_date=ymd(df_final$pub_date)
+df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 
 ### Generate time period dates ###
+df_final$days_10=df_final$pub_date+days(10)
+df_final$days_90=df_final$pub_date+days(90)
+df_final$year_1=df_final$pub_date+years(1)
 # Create time periods
 Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
 Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
 Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
 #Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
-if (pub_date!=0){
-	pub_date=ymd(pub_date)}
-
-days_10=pub_date+days(10)
-days_90=pub_date+days(90)
-year_1=pub_date+years(1)
-docs=Corpus(VectorSource(save_docs))
 
 ## Qualitative Text Analyses ##
+#custom_bigram <- content_transformer(function (x , pattern ) gsub(pattern, "paid_leave", x))
 # Primary WordCloud #
-doc <- Corpus(VectorSource(paste(text_stats$body,text_stats$tags,text_stats$title)))
+doc=Corpus(VectorSource(save_docs))
 doc <- tm_map(doc, removeNumbers)
 doc <- tm_map(doc, tolower)
 doc <- tm_map(doc, stripWhitespace)
 doc <- tm_map(doc, removePunctuation)
 doc <- tm_map(doc, PlainTextDocument)
-doc <- tm_map(doc, stemDocument)
+doc <- tm_map(doc, toSpace, "/")
+doc <- tm_map(doc, toSpace, "@")
+#doc <- tm_map(doc, custom_bigram, "paid leave")
+doc <- tm_map(doc, toSpace, "\\|")
+doc <- tm_map(doc, toNothing, "-")
+doc <- tm_map(doc, toNothing, "—")
+doc <- tm_map(doc, toNothing, "–")
+doc <- tm_map(doc, removeWords, stopwords("english"))
+doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one'))
 # creating of document matrix
-tdm <- TermDocumentMatrix(keywords_doc)
+tdm <- TermDocumentMatrix(doc)
 m <- as.matrix(tdm)
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
 head(d, 10)
 set.seed(12)
-wordcloud(words = d$word, freq = d$freq, min.freq = 3,
-										max.words=200, 
+cloud=wordcloud(words = d$word, freq = d$freq, min.freq = 3,	max.words=150, 
 										random.order = FALSE,rot.per=.35,vfont=c("sans serif","plain"),
 										colors=brewer.pal(8, "Dark2"))
+
+save(df_final, file = "GA_VBC(5-6-18).RData")
+save(save_docs, file = "save_docs.RData")
+
+
 
 ### Quantitative Analyses ###
 my_theme <- function(){
@@ -315,8 +328,7 @@ Audience_Captivation <- aggregate(avg_MinPerWord ~ title, Audience_Captivation, 
 # Happy
 Happy_audience=filter(Audience_Captivation, row_number(-avg_MinPerWord) <= 10)
 Happy_audience <- Happy_audience %>% arrange(avg_MinPerWord)
-Happy_audience$title<-factor(Happy_audience$title,
-																																		levels=Happy_audience$title[order(Happy_audience$avg_MinPerWord)])
+Happy_audience$title<-factor(Happy_audience$title,levels=Happy_audience$title[order(Happy_audience$avg_MinPerWord)])
 ggplot(data=Happy_audience, aes(x=title, y=avg_MinPerWord)) +
 	ggtitle(sprintf("10 Best Audience Attrition", name),subtitle = "Time Spent per Word in Aticle Text" ) +
 	geom_bar(stat="identity", width=0.5)+ coord_flip() + my_theme()+ 
@@ -325,12 +337,9 @@ ggplot(data=Happy_audience, aes(x=title, y=avg_MinPerWord)) +
 # Sad Audience
 sad_audience<-filter(Audience_Captivation, row_number(avg_MinPerWord) <= 10)
 sad_audience <- sad_audience %>% arrange(avg_MinPerWord)
-sad_audience$title<-factor(sad_audience$title,
-																													levels=sad_audience$title[order(sad_audience$avg_MinPerWord)])
-
-ggplot(data=sad_audience, aes(x=title, y=avg_MinPerWord)) +
-	ggtitle(sprintf("10 Worst Audience Attrition", name)
-									,subtitle = "Time Spent per Word in Aticle Text" 	) +
+sad_audience$title<-factor(sad_audience$title,levels=sad_audience$title[order(sad_audience$avg_MinPerWord)])
+ggplot(data=sad_audience, aes(x=title, y=avg_MinPerWord))+
+	ggtitle(sprintf("10 Worst Audience Attrition", name),subtitle="Time Spent per Word in Aticle Text")+
 	geom_bar(stat="identity", width=0.5)+ coord_flip() + my_theme()+
 	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
 
