@@ -8,6 +8,7 @@
 #https://www.r-bloggers.com/intro-to-text-analysis-with-r/
 
 # Fonts
+library(extrafont)
 font_import()
 loadfonts()
 
@@ -16,7 +17,6 @@ getwd()
 library(googleAnalyticsR)
 library(dplyr)
 library(httr)
-library(extrafont)
 library(RCurl)
 library(XML)
 library(foreach)
@@ -77,18 +77,18 @@ get_data <- function(vid, from, to, dim, met, max) {
   df <- google_analytics(viewId = vid, date_range = c(from, to), metrics = met,  dimensions = dim,
               #met_filters = fc, 
                dim_filters = fc2,  max = max	,anti_sample = TRUE)
-  # clean up and set class
-  #df$obs_day=ymd(df$date)
+# clean up and set class
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
 		df$author_full=df$dimension1
 		df$dimension1 <- NULL
 		df$author=name
 		df$co_authors = gsub(name, '', df$author_full)
-		df$co_authors=trimws(df$co_authors)
 		df$co_authors = gsub("^,*|(?<=,),|,*$", "", df$co_authors, perl=T)
-		df$collaboration_yn=ifelse(df$author!=df$author_full & length(df$author_full)!=0, "Co-Authored",
-																					 ifelse(df$author==df$author_full, "Sole author",0))
-		df}
+		df$co_authors=gsub(', , ', ', ', df$co_authors)
+		df$co_authors=trimws(df$co_authors)
+		df$collaboration_yn=ifelse(df$author==df$author_full,"Sole Author",
+																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
+df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 str(gadata)
 #######
@@ -232,7 +232,10 @@ category_2=c('women', 'family', 'leave','gender','gap')
 #category_3=c('women', 'family', 'leave','gender','gap')
 #category_4=c('women', 'family', 'leave','gender','gap')
 
+
 ## Generate 
+unique(df_final$co_authors)
+
 text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
 											ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues","Other"))
 
@@ -245,7 +248,6 @@ df_final=df_final[!is.na(df_final$title),]
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
 df_final$type=as.character(df_final$type)
 df_final$one=1
-df_final$co_authors=gsub(', , ', ', ', df_final$co_authors)
 
 df_final$pub_date=ymd(df_final$pub_date)
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
@@ -254,11 +256,6 @@ df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$days_10=df_final$pub_date+days(10)
 df_final$days_90=df_final$pub_date+days(90)
 df_final$year_1=df_final$pub_date+years(1)
-# Create time periods
-Recep_Quick=subset(df_final, (pub_date < obs_day) & (obs_day< days_10))
-Recep_Medium=subset(df_final, (pub_date < obs_day) & (obs_day< days_90))
-Recep_Long=subset(df_final, (pub_date < obs_day) & (obs_day< year_1))
-#Recep_Long3=subset(df1, (pub_date < obs_day) & (obs_day< days_10))
 
 ## Qualitative Text Analyses ##
 #custom_bigram <- content_transformer(function (x , pattern ) gsub(pattern, "paid_leave", x))
