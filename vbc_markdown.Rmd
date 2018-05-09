@@ -85,33 +85,15 @@ This is `r (name)`'s web analytics report from between the dates `r (begin)` and
 
 \pagebreak
 
-Below is a count of content published by `r (name)` that has been colored according to co-authorship.
+**Total unique viewers with top content on high traffic days highlighted**
 
-```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
-Bar_type_df =subset(df_final, type != "events") # Remove events
-Bar_type_df$collaboration_yn=ifelse(Bar_type_df$author!=Bar_type_df$author_full & length(Bar_type_df$author_full)!=0, "Co-Authored", ifelse(Bar_type_df$author==Bar_type_df$author_full, "Sole Author",0))
+Colored by topic between the dates `r (begin)` and `r (end)`.
 
-Bar_type_df<-Bar_type_df %>% distinct(type,title,collaboration_yn,one)
-title_name=sprintf("%s's Content Breakdown",name)
-
-ggplot(data=Bar_type_df,aes(x=type,y=one,fill=collaboration_yn))+
-ggtitle(sprintf("%s's Content Breakdown ", name), # Add the title and subtitle
-subtitle=sprintf("\n Total Content: %s",sum(Bar_type_df$one)))+
-geom_bar(stat="identity", width=0.8)+ my_theme()+theme(legend.position="bottom", 
-legend.box = "horizontal")+theme(legend.title=element_blank())+
-	scale_y_continuous(expand = c(0, .3)) #+ scale_x_continuous(expand = c(0, 0))
-
-```
-
-
-**Total unique viewers with 10 top content on that**
-colored by topic between the dates `r (begin)` and `r (end)`.
-
-```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=9.5, fig.width=10}
 # Line Chart
 total_line =subset(df_final, type != "events"&type !="multimedia") # Remove events
 total_line=aggregate(sessions ~ title + author_categories + obs_day, total_line, sum)
-total_line$big_day <- ifelse(total_line$sessions > 500, paste(total_line$title," (",total_line$obs_day,")"), "")
+total_line$big_day <- ifelse(total_line$sessions > 500, paste0(total_line$title,"(",as.character(total_line$obs_day),")"), "")
 
 line=total_line %>%
 ggplot(aes(x=obs_day,y=sessions,group=author_categories,colour=author_categories))+geom_line()+
@@ -120,19 +102,30 @@ ggplot(aes(x=obs_day,y=sessions,group=author_categories,colour=author_categories
 	scale_y_continuous(expand = c(0, .3))
 
 library(ggrepel)
-line + geom_label_repel(data = subset(total_line %>% group_by(title) %>% #summarise(sessions = max(sessions)) %>% #  tapply(total_line$sessions, total_line$title, max) %>% 
-												    top_n(n=10, wt=big_day))
-												    ,	aes(label=big_day), size=4.5)+ theme(legend.position = "None")   # label
-
+line + geom_label_repel(data = subset(total_line %>% group_by(title) %>% top_n(n=10, wt=big_day))
+												    ,	aes(label=big_day), size=4)+ theme(legend.position = "None")   # label
 
 ```
 
-
 \pagebreak
 
-**Popular Co-Authors for `r (name)`**
+**Count of published content by `r (name)`, colored by co-authorship**
 
-Note: multimedia is ommitted.
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
+Bar_type_df =subset(df_final, type != "events") # Remove events
+Bar_type_df$collaboration_yn=ifelse(Bar_type_df$author!=Bar_type_df$author_full & length(Bar_type_df$author_full)!=0, "Co-Authored", ifelse(Bar_type_df$author==Bar_type_df$author_full, "Sole Author",0))
+Bar_type_df<-Bar_type_df %>% distinct(type,title,collaboration_yn,one)
+
+ggplot(data=Bar_type_df,aes(x=type,y=one,fill=collaboration_yn))+
+ggtitle(sprintf("Total Content: %s",sum(Bar_type_df$one)), 
+subtitle=sprintf("",sum(Bar_type_df$one)))+
+geom_bar(stat="identity", width=0.8)+ my_theme()+theme(legend.position="bottom", 
+legend.box = "horizontal")+theme(legend.title=element_blank())+
+	scale_y_continuous(expand = c(0, .3)) 
+
+```
+
+**Popular Co-Authors for `r (name)` (Multimedia Excluded)**
 
 ```{r, echo=FALSE, message=FALSE,warning = FALSE}
 pie =subset(df_final, 
@@ -149,11 +142,13 @@ pie$label <- scales::percent(pie$per)
 pie_chart=ggplot(pie, aes(x = '', y=per, fill=(co_authors)) ) +
 	geom_bar(width = 1,stat="identity")+coord_polar("y",start=0) +
 	labs(fill='co-authors') + xlab("") + ylab("")+  geom_text(aes(x=1, label=label), 
-	position = position_stack(vjust = .5))+ theme_void() + ggtitle(sprintf("%s's co-authors", name))
+	position = position_stack(vjust = .5))+ theme_void()
 pie_chart
 ```
+\pagebreak
 
-```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=6}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=12, fig.width=10}
 ### Generate time period dates ###
 thirty_days= subset(df_final , days_aft_pub <= 30)
 thirty_days$days_aft_pub= ifelse(thirty_days$days_aft_pub < 0, 0, thirty_days$days_aft_pub)
@@ -163,35 +158,73 @@ thirty_days$title<-factor(thirty_days$title,levels=thirty_days$title[order(thirt
 
 ggplot(data=thirty_days, aes(x=title,y=sessions,colour=author_categories) ) +
 	ggtitle(sprintf("Blog performance within 30 Days of Publication", name))+ #,subtitle = "Unique User Views" ) +
-	geom_bar(aes(fill = author_categories),stat="identity",width=.2, position = "dodge")+coord_flip()+my_theme()+ 
+	geom_bar(aes(fill = author_categories),stat="identity",width=.5, position = "dodge")+coord_flip()+my_theme()+ 
 	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
 	scale_y_continuous(expand = c(0, .3))
-
-### Generate time period dates ###
-ninty_days= subset(df_final , days_aft_pub <= 150)
-ninty_days$days_aft_pub= ifelse(ninty_days$days_aft_pub < 0, 0, ninty_days$days_aft_pub)
-ninty_days =subset(ninty_days, type == "blog") # blogs only
-ninty_days=aggregate(sessions ~ title+author_categories, ninty_days, sum)
-ninty_days$title<-factor(ninty_days$title,levels=ninty_days$title[order(ninty_days$sessions)])
-
-ggplot(data=ninty_days, aes(x=title,y=sessions,colour=author_categories) ) +
-	ggtitle(sprintf("Blog performance within 90 Days of Publication", name))+ #,subtitle = "Unique User Views" ) +
-	geom_bar(aes(fill = author_categories),stat="identity",width=.2, position = "dodge")+coord_flip()+my_theme()+ 
-	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
-	scale_y_continuous(expand = c(0, .3))
-
-
-# ninty_days=aggregate(sessions ~ title + days_aft_pub, ninty_days, sum)
-# plot_30=ninty_days %>% ggplot(aes(x=days_aft_pub,y=sessions,group=title,colour=title))+geom_line()+
-# 	theme(axis.text.x=element_text(angle=90,hjust = 1),legend.position="none")+my_theme()+
-# 	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank()) 
-# library(ggrepel)
-# plot_30 + geom_label_repel(data = subset(ninty_days, 
-# 												    days_aft_pub == max(days_aft_pub)),
-# 	aes(label=title), size=2)
-#+ theme(legend.position = "None")   # label
 ```
 
+\pagebreak
+
+**Content performance within first 45 Days of Publication**
+
+Unique User Visits
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=7, fig.width=8}
+### Generate time period dates ###
+ninty_days =subset(df_final, days_aft_pub <= 50 & type != "events") # no events
+ninty_days$days_aft_pub= ifelse(ninty_days$days_aft_pub < 0, 0, ninty_days$days_aft_pub)
+ninty_days=aggregate(sessions ~ title+author_categories+type, ninty_days, sum)
+ninty_days<-filter(ninty_days, row_number(-sessions) <= 20)
+
+ninty_days$cat_type= paste0(ninty_days$author_categories," (",ninty_days$type,")")
+
+ninty_days$title<-factor(ninty_days$title,levels=ninty_days$title[order(ninty_days$sessions)])
+
+ggplot(data=ninty_days, aes(x=title,y=sessions,colour=cat_type) ) +
+	#ggtitle(sprintf("Content performance within first 45 Days of Publication", name), subtitle = "Unique User Visits" ) +
+	geom_bar(aes(fill = cat_type),stat="identity",width=.4, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))
+```
+
+\pagebreak
+Multimedia has a noticeably lower exit rate.  A likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=9, fig.width=8.5}
+### Generate time period dates ###
+exit_rate =subset(df_final,  type != "events") # no events
+exit_rate$days_aft_pub= ifelse(exit_rate$days_aft_pub < 0, 0, exit_rate$days_aft_pub)
+exit_rate$cat_type= paste0(exit_rate$author_categories," (",exit_rate$type,")")
+
+exit_rate1=aggregate(exitRate ~ cat_type, exit_rate, mean)
+exit_rate1$cat_type<-factor(exit_rate1$cat_type,levels=exit_rate1$cat_type[order(exit_rate1$exitRate)])
+
+bar = ggplot(data=exit_rate1, aes(x=cat_type,y=exitRate,colour=cat_type) ) +
+	ggtitle(sprintf("Average Exit Rate", name), subtitle = "" ) +
+	geom_bar(aes(fill = cat_type),stat="identity",width=.4, position = "dodge")+my_theme() +
+	geom_label_repel(data = exit_rate1,	aes(label=exitRate), size=4.5,show_guide=F)+ theme(legend.position = "None")+
+	theme(legend.position="bottom", axis.text.x=element_blank(), legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))#+axis.text.x=element_blank()
+bar
+
+exit_rate2=aggregate(exitRate ~ title + type, exit_rate, mean)
+
+exit_rate2$web_recs= ifelse(exit_rate2$type=="blog" | exit_rate2$type=="commentary" | exit_rate2$type=="policy analysis"|exit_rate2$type=="tax budget bulletin", "no","yes")
+
+scatter= ggplot(data=exit_rate2, aes(x=title,y=exitRate,colour=as.factor(web_recs)) ) +
+	ggtitle(sprintf("Average Exit Rate", name), subtitle = "" ) +
+	geom_point(aes(fill = web_recs),stat="identity",width=.4, position = "dodge")+my_theme() +
+	#geom_label_repel(data = exit_rate2,	aes(label=exitRate), size=4.5,show_guide=F)+
+	theme(legend.position="bottom", axis.text.x=element_blank(), legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))
+#unique(exit_rate2$type)	
+scatter +
+  geom_smooth (data = subset(exit_rate2, web_recs=="no"),  formula= y~x, method='lm',se=FALSE, size=2) +
+  geom_smooth (data = subset(exit_rate2, web_recs=="yes"),  formula= y~x, method='lm', se = FALSE, size = 2)
+
+#+axis.text.x=element_blank()
+
+```
 \pagebreak
 
 This section examines time spent on reading an article relative to the number of words of text in the article.  Below are the 10 best and worst performing articles.  Multimedia (e.g. Podcasts) are ignored. This measure is designed to give you a rough idea of the types of articles people are likely to read through. 
