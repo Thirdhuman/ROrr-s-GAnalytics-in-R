@@ -165,7 +165,7 @@ ggplot(data=thirty_days, aes(x=title,y=sessions,colour=author_categories) ) +
 
 \pagebreak
 
-**Content performance within first 45 Days of Publication**
+**Top performing content within first 45 Days of Publication**
 
 Unique User Visits
 
