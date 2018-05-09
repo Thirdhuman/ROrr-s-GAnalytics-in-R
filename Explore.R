@@ -136,7 +136,7 @@ for(i in 1:nrow(df1)){
 																					)
 			df2 <- rbind(df2, web_df)
 }			
-#Combine Initial Loop of  into
+#Combine Initial Loop of text into ga data
 df_intermediate <- cbind(df1, df2)
 df_intermediate<-df_intermediate[!(df_intermediate$type=="cc.bingj.com"),]
 
