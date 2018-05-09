@@ -188,41 +188,24 @@ ggplot(data=ninty_days, aes(x=title,y=sessions,colour=cat_type) ) +
 ```
 
 \pagebreak
-Multimedia has a noticeably lower exit rate.  A likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
+Multimedia content () has a noticeably lower exit rate.  A likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
 
 ```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=9, fig.width=8.5}
 ### Generate time period dates ###
 exit_rate =subset(df_final,  type != "events") # no events
 exit_rate$days_aft_pub= ifelse(exit_rate$days_aft_pub < 0, 0, exit_rate$days_aft_pub)
 exit_rate$cat_type= paste0(exit_rate$author_categories," (",exit_rate$type,")")
+exit_rate$web_recs=ifelse(exit_rate$type=="blog"|exit_rate$type=="commentary"|exit_rate$type=="policy analysis"|exit_rate$type=="tax budget bulletin", "No","Yes")
 
-exit_rate1=aggregate(exitRate ~ cat_type, exit_rate, mean)
+exit_rate1=aggregate(exitRate ~ cat_type+web_recs, exit_rate, mean)
 exit_rate1$cat_type<-factor(exit_rate1$cat_type,levels=exit_rate1$cat_type[order(exit_rate1$exitRate)])
-
-bar = ggplot(data=exit_rate1, aes(x=cat_type,y=exitRate,colour=cat_type) ) +
+bar = ggplot(data=exit_rate1, aes(x=cat_type,y=exitRate,colour=web_recs) ) +
 	ggtitle(sprintf("Average Exit Rate", name), subtitle = "" ) +
-	geom_bar(aes(fill = cat_type),stat="identity",width=.4, position = "dodge")+my_theme() +
-	geom_label_repel(data = exit_rate1,	aes(label=exitRate), size=4.5,show_guide=F)+ theme(legend.position = "None")+
-	theme(legend.position="bottom", axis.text.x=element_blank(), legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	geom_bar(aes(fill = web_recs),stat="identity",width=.4, position = "dodge")+my_theme() +
+	geom_label_repel(data = exit_rate1,	aes(label=exitRate), size=4.5,show_guide=F)+ theme(legend.position = "None")+coord_flip()+
+	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank()) +
 	scale_y_continuous(expand = c(.01, .3))#+axis.text.x=element_blank()
 bar
-
-exit_rate2=aggregate(exitRate ~ title + type, exit_rate, mean)
-
-exit_rate2$web_recs= ifelse(exit_rate2$type=="blog" | exit_rate2$type=="commentary" | exit_rate2$type=="policy analysis"|exit_rate2$type=="tax budget bulletin", "no","yes")
-
-scatter= ggplot(data=exit_rate2, aes(x=title,y=exitRate,colour=as.factor(web_recs)) ) +
-	ggtitle(sprintf("Average Exit Rate", name), subtitle = "" ) +
-	geom_point(aes(fill = web_recs),stat="identity",width=.4, position = "dodge")+my_theme() +
-	#geom_label_repel(data = exit_rate2,	aes(label=exitRate), size=4.5,show_guide=F)+
-	theme(legend.position="bottom", axis.text.x=element_blank(), legend.box = "horizontal")+theme(legend.title=element_blank()) +
-	scale_y_continuous(expand = c(.01, .3))
-#unique(exit_rate2$type)	
-scatter +
-  geom_smooth (data = subset(exit_rate2, web_recs=="no"),  formula= y~x, method='lm',se=FALSE, size=2) +
-  geom_smooth (data = subset(exit_rate2, web_recs=="yes"),  formula= y~x, method='lm', se = FALSE, size = 2)
-
-#+axis.text.x=element_blank()
 
 ```
 \pagebreak
