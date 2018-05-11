@@ -30,8 +30,6 @@ simpleCap <- function(x) {
 	if (!is.na(s[1])) {
 		return(paste(toupper(substring(s, 1, 1)), substring(s, 2), sep = "", collapse = " "))} else {
 		return(NA)}}
-toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
-toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
 
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
@@ -43,22 +41,23 @@ ga_id <- account_list$viewId[1]
 # Setup script
 #
 
-name="Vanessa Brown Calder"
+name="Michael D. Tanner"
+
 name=as.character(name)
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
-from <- "2016-07-01"
+from <- "2014-08-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
 dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
 fc2 <- filter_clause_ga4(list(dimf
 																														#,dimf2
-																														), operator = "AND")
+																														), operator = "OR")
 
 ## Specify Search terms
-max = 1000000
+max = 5000000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
@@ -90,29 +89,106 @@ get_data <- function(vid, from, to, dim, met, max) {
 																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
 df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
+save(gadata, file = "Last_Raw_GA_DAT.RData")
+
+#######
+load( file = "Last_Raw_GA_DAT.RData")
 str(gadata)
 #######
-refcols <- c("obs_day") 
 df1 = gadata
 df1$obs_day=ymd(df1$date)
+df1$date<-NULL
+
+df1 <- df1[- grep("search/srpcache", df1$pagePath),]
+df1 <- df1[- grep("www.filterbypass.me", df1$pagePath),]
+df1 <- df1[- grep("wikipedia.org/secure", df1$pagePath),]
+df1 <- df1[- grep("www.googleadservices.com", df1$pagePath),]
+df1 <- df1[- grep("bit.ly", df1$pagePath),]
+df1 <- df1[- grep("j.mp", df1$pagePath),]
+df1 <- df1[- grep("cc.bingj.com", df1$pagePath),]
+df1 <- df1[- grep("prolegis/getfile", df1$pagePath),]
+df1 <- df1[- grep("cluster23-files.instructure", df1$pagePath),]
+df1 <- df1[- grep("rorr.im/reddit.com", df1$pagePath),]
+df1 <- df1[- grep("www.duplichecker.com", df1$pagePath),]
+df1 <- df1[- grep("copyscape", df1$pagePath),]
+df1 <- df1[- grep("eveil.alize", df1$pagePath),]
+
+df1$pagePath2= gsub(".*www.cato.org", "www.cato.org", df1$pagePath)
+df1$pagePath2= gsub(pattern="[?].*","",x=df1$pagePath2)
+df1$pagePath2= gsub(pattern=".*https://*|&.*","",x=df1$pagePath2)
+df1$pagePath2= gsub(pattern=".*genius.it/*|&.*",replacement="",x=df1$pagePath2)
+df1$pagePath2= gsub(".*www-cato-org","www.cato.org",df1$pagePath2,perl=TRUE)
+df1$pagePath2= gsub(".*www.cato.org.*?/publications","www.cato.org/publications",df1$pagePath2,perl=TRUE)
+df1$pagePath2= gsub("\\.myaccess.library.utoronto.ca", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub("proxy.earlham.edu", "www.cato.org", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub("object.cato.org", "www.cato.org", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub("seekingalpha.com", "www.cato.org", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub(".ezproxy.wallawalla.edu", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub(".proxy.lib.pdx.edu", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub("www.cato.org:80", "www.cato.org", df1$pagePath2, perl=TRUE) # Index.html 
+df1$pagePath2= gsub("www.cato-at-liberty.org", "www.cato.org/blog", df1$pagePath2, perl=TRUE) # Index.html 
+df1$pagePath2= gsub("index.html", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2,perl=TRUE)  
+df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath2)
+refcols <- c("obs_day", 'pagePath', 'pagePath2') 
 df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
+
+fake=unique(df1[df1$pagePath2 != df1$pagePath, c("pagePath2", "pagePath")])
+fake$one=1
+deduped.data = fake[!duplicated(fake$pagePath2),]
+
+
+deduped.data <- unique( fake[ , 1 ] )
+
+fake=unique(fake$pagePath2)
+
+
+fake=(fake[unique(fake$pagePath2) == T, c("pagePath2", "pagePath")])
+
+
+www.cato.org/blog/what-have-the-politicians-in-washington-given-us/
+www.cato.org/blog/what-have-politicians-washington-given-us
+	
+www.cato.org:80/policy-report/januaryfebruary-2008/lessons-fall-romneycare/index.html
+https://www.cato.org/policy-report/januaryfebruary-2008/lessons-fall-romneycare
+
+object.cato.org/publications/commentary/behind-times-obamacare-news
+
+
+refcols <- c("obs_day", 'pagePath', 'pagePath2') 
+df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
+
+df1[df1$pagePath2 != df1$pagePath, "pagePath2"]
+
+
 df_final= data.frame()
 df2 = data.frame()
 web_df= data.frame()
-names()
 unique(df1$obs_day)
+errorlist=list()
+
 #df1$date <- NULL
 for(i in 1:nrow(df1)){
+	tryCatch({
 			row_numb = i 
 			url=df1$pagePath[i]
 			#url='www.cato.org/blog/lack-zoning-not-houstons-problem?goal=0_395878584c-1af3773aff-143016961&mc_cid=1af3773aff&mc_eid=3fd7404a34'
 			#url='www-cato-org.myaccess.library.utoronto.ca/blog/race-amazon-headquarters-should-be-race-reform-zoning'
+			#url='http://fanyi.ydstatic.com/translate_url?rurl=http://fanyi.youdao.com/&url=http://www.cato.org/events/lessons-baltimore&type=en2zh_cn&usg=youdaowebfanyi-2576355379943872353m41197286&keyfrom=webfanyi.changelink'
 			#url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=url&query=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&from=en&to=zh&token=&monlang=zh'
+			#url='0-www.cato.org.skyline.ucdenver.edu/publications/commentary/new-war-poverty'
+
+			url= gsub(".*www.cato.org", "www.cato.org", url)
 			url= gsub(pattern=".*https://*|&.*","",x=url)
 			url= gsub(pattern="[?].*","",x=url)
 			url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
-			url= gsub(pattern=".*www-cato-org.myaccess.library.utoronto.ca",replacement="www.cato.org",x=url)
-			url
+			#print(url)
+			url= gsub(pattern=".*www-cato-org",replacement="www.cato.org",x=url,perl=TRUE)
+			url= gsub(pattern=".*www.cato.org.*?/publications",replacement="www.cato.org/publications",x=url,perl=TRUE)
+			url= gsub("\\.myaccess.library.utoronto.ca", "", url, perl=TRUE)
+			url= gsub("proxy.earlham.edu", "www.cato.org", url, perl=TRUE)
+			
+			#print(url)
 			html<-getURL(url,followlocation=TRUE)
 			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 			parsed=htmlParse(html)
@@ -121,25 +197,27 @@ for(i in 1:nrow(df1)){
 			title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
 			if (length(title)==0){title = 0	}
 # Grab Publication Date
-			pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
-			if (length(pub_date)==0){pub_date=0}
+			#pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
+			#if (length(pub_date)==0){pub_date=0}
 #Grab Media type
 			type = gsub('www.cato.org*/|/.*', "\\1", url)
 			type = gsub('-', " ", type)
 			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
 			type_2 = gsub('-', " ", type_2)
 			type=ifelse((type=="publications"), type_2, type)
-			web_df=data.frame(title=title, type=type, pub_date=pub_date,row_numb=row_numb 
-																					#body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))),
+			web_df=data.frame(title=title, type=type,row_numb=row_numb 
+																					#body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))),pub_date=pub_date
 																					#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
 																					#days_90=days_90, year_1=year_1, days_10=days_10
 																					)
 			df2 <- rbind(df2, web_df)
-}			
+	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")
+		list=append(errorlist, url)})
+}
+
 #Combine Initial Loop of text into ga data
 df_intermediate <- cbind(df1, df2)
 df_intermediate<-df_intermediate[!(df_intermediate$type=="cc.bingj.com"),]
-
 
 # Extract web content from Cato Website
 df3= data.frame()
@@ -148,6 +226,7 @@ text_content <- df_intermediate %>%
 text_content=text_content[!duplicated(text_content),]
 
 for(i in 1:nrow(text_content)){
+	tryCatch({
 	row_count = i
 	url=text_content$pagePath[i]
 	url= gsub(pattern=".*https://*|&.*","",x=url)
@@ -168,6 +247,9 @@ if (length(body)==0){body = 0	}
 #if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
 body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
 if (length(body_count)==0){body_count = 0	}
+# Grab Publication Date
+pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
+if (length(pub_date)==0){pub_date=0}
 # Tags and Topics
 tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
 if (length(tags)==0){tags = 0	}
@@ -183,11 +265,13 @@ topics=trimws(as.list(topics))
 topics=as.list(topics)
 content_df=data.frame(
 																		#title=title, type=type, pub_date=pub_date,row_count=row_count, days_90=days_90, year_1=year_1, days_10=days_10
-																		body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics)))
+																		body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))), pub_date=pub_date
 																		#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
 																		)
 df3 <- rbind(df3, content_df)
+	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")})
 }
+
 # Text Analysis	- Generate Text Wall	
 text_wall <- df3 %>%
 	distinct(title, body,tags)
@@ -201,6 +285,9 @@ library(tm)
 library(wordcloud)
 library(topicmodels)
 library(quanteda)
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
+
 
 text_stats <- cbind(text_content, df3)
 text_stats$row_count = NULL
@@ -227,8 +314,14 @@ for(k in 1:nrow(text_stats)){
 	}
 ## Generate Author's Custom Categories ##
 unique(text_stats$top_terms[1:12])
-category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
-category_2=c('women', 'family', 'leave','gender','gap')
+
+# Michael D. Tanner Categories
+category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism')
+category_2=c('social', 'security', 'medicare','retirement','liabilities', 'entitlements', 'debt')
+
+# Vanessa B. Calder Categories
+#category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
+#category_2=c('women', 'family', 'leave','gender','gap')
 #category_3=c('women', 'family', 'leave','gender','gap')
 #category_4=c('women', 'family', 'leave','gender','gap')
 
@@ -256,6 +349,10 @@ df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$days_10=df_final$pub_date+days(10)
 df_final$days_90=df_final$pub_date+days(90)
 df_final$year_1=df_final$pub_date+years(1)
+
+save(df_final, file = "GA_MDT(5-9-18).RData")
+save(save_docs, file = "save_docs(Tanner).RData")
+
 
 ## Qualitative Text Analyses ##
 #custom_bigram <- content_transformer(function (x , pattern ) gsub(pattern, "paid_leave", x))
@@ -286,8 +383,6 @@ cloud=wordcloud(words = d$word, freq = d$freq, min.freq = 3,	max.words=150,
 										random.order = FALSE,rot.per=.35,vfont=c("sans serif","plain"),
 										colors=brewer.pal(8, "Dark2"))
 
-save(df_final, file = "GA_VBC(5-6-18).RData")
-save(save_docs, file = "save_docs.RData")
 
 
 
