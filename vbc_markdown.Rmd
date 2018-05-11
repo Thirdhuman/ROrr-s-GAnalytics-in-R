@@ -188,7 +188,7 @@ ggplot(data=ninty_days, aes(x=title,y=sessions,colour=cat_type) ) +
 ```
 
 \pagebreak
-Multimedia content () has a noticeably lower exit rate.  A likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
+Multimedia content (e.g. Podcasts) has a noticeably lower exit rate.  A likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
 
 ```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=9, fig.width=8.5}
 ### Generate time period dates ###

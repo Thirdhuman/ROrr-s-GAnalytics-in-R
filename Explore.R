@@ -23,6 +23,9 @@ library(foreach)
 library(stringr)
 library(ggplot2)
 library(lubridate)
+library(data.table)
+#library(plyr)
+
 
 # Functions
 simpleCap <- function(x) {
@@ -41,13 +44,14 @@ ga_id <- account_list$viewId[1]
 # Setup script
 #
 
+name="Alex Nowrasteh"
 name="Michael D. Tanner"
 
 name=as.character(name)
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
-from <- "2014-08-01"
+from <- "2018-03-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -71,7 +75,7 @@ dim = c(
 								'pagePath'
 								)
 # the function
-df2 = data.frame()
+df2 = data.table()
 get_data <- function(vid, from, to, dim, met, max) {
   df <- google_analytics(viewId = vid, date_range = c(from, to), metrics = met,  dimensions = dim,
               #met_filters = fc, 
@@ -90,28 +94,30 @@ get_data <- function(vid, from, to, dim, met, max) {
 df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 save(gadata, file = "Last_Raw_GA_DAT.RData")
-
 #######
 load( file = "Last_Raw_GA_DAT.RData")
-str(gadata)
+#str(gadata)
 #######
-df1 = gadata
+df1 = (gadata)
+rm(gadata)
 df1$obs_day=ymd(df1$date)
 df1$date<-NULL
-
-df1 <- df1[- grep("search/srpcache", df1$pagePath),]
-df1 <- df1[- grep("www.filterbypass.me", df1$pagePath),]
-df1 <- df1[- grep("wikipedia.org/secure", df1$pagePath),]
-df1 <- df1[- grep("www.googleadservices.com", df1$pagePath),]
-df1 <- df1[- grep("bit.ly", df1$pagePath),]
-df1 <- df1[- grep("j.mp", df1$pagePath),]
-df1 <- df1[- grep("cc.bingj.com", df1$pagePath),]
-df1 <- df1[- grep("prolegis/getfile", df1$pagePath),]
-df1 <- df1[- grep("cluster23-files.instructure", df1$pagePath),]
-df1 <- df1[- grep("rorr.im/reddit.com", df1$pagePath),]
-df1 <- df1[- grep("www.duplichecker.com", df1$pagePath),]
-df1 <- df1[- grep("copyscape", df1$pagePath),]
-df1 <- df1[- grep("eveil.alize", df1$pagePath),]
+# 
+df1 <- df1[!grepl("search/srpcache", df1$pagePath),]
+df1 <- df1[!grepl("www.filterbypass.me", df1$pagePath),]
+df1 <- df1[!grepl("wikipedia.org/secure", df1$pagePath),]
+df1 <- df1[!grepl("www.googleadservices.com", df1$pagePath),]
+df1 <- df1[!grepl("bit.ly", df1$pagePath),]
+df1 <- df1[!grepl("j.mp", df1$pagePath),]
+df1 <- df1[!grepl("nl.hideproxy.me", df1$pagePath),]
+df1 <- df1[!grepl("cc.bingj.com", df1$pagePath),]
+df1 <- df1[!grepl("prolegis/getfile", df1$pagePath),]
+df1 <- df1[!grepl("cluster23-files.instructure", df1$pagePath),]
+df1 <- df1[!grepl("rorr.im/reddit.com", df1$pagePath),]
+df1 <- df1[!grepl("www.duplichecker.com", df1$pagePath),]
+df1 <- df1[!grepl("copyscape", df1$pagePath),]
+df1 <- df1[!grepl("us1.proxysite", df1$pagePath),]
+df1 <- df1[!grepl("eveil.alize", df1$pagePath),]
 
 df1$pagePath2= gsub(".*www.cato.org", "www.cato.org", df1$pagePath)
 df1$pagePath2= gsub(pattern="[?].*","",x=df1$pagePath2)
@@ -124,6 +130,7 @@ df1$pagePath2= gsub("proxy.earlham.edu", "www.cato.org", df1$pagePath2, perl=TRU
 df1$pagePath2= gsub("object.cato.org", "www.cato.org", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub("seekingalpha.com", "www.cato.org", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub(".ezproxy.wallawalla.edu", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub(".stfi.re", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub(".proxy.lib.pdx.edu", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub("www.cato.org:80", "www.cato.org", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("www.cato-at-liberty.org", "www.cato.org/blog", df1$pagePath2, perl=TRUE) # Index.html 
@@ -133,62 +140,25 @@ df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath
 refcols <- c("obs_day", 'pagePath', 'pagePath2') 
 df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
 
-fake=unique(df1[df1$pagePath2 != df1$pagePath, c("pagePath2", "pagePath")])
-fake$one=1
-deduped.data = fake[!duplicated(fake$pagePath2),]
+df1 = setDT(df1)
+df1.pagePath1=df1.pagePath
+df1.pagePath=df1.pagePath2
+df1.pagePath2=NULL
 
-
-deduped.data <- unique( fake[ , 1 ] )
-
-fake=unique(fake$pagePath2)
-
-
-fake=(fake[unique(fake$pagePath2) == T, c("pagePath2", "pagePath")])
-
-
-www.cato.org/blog/what-have-the-politicians-in-washington-given-us/
-www.cato.org/blog/what-have-politicians-washington-given-us
-	
-www.cato.org:80/policy-report/januaryfebruary-2008/lessons-fall-romneycare/index.html
-https://www.cato.org/policy-report/januaryfebruary-2008/lessons-fall-romneycare
-
-object.cato.org/publications/commentary/behind-times-obamacare-news
-
-
-refcols <- c("obs_day", 'pagePath', 'pagePath2') 
-df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
-
-df1[df1$pagePath2 != df1$pagePath, "pagePath2"]
-
-
-df_final= data.frame()
-df2 = data.frame()
-web_df= data.frame()
-unique(df1$obs_day)
+# fake=unique(df1[df1$pagePath2 != df1$pagePath, c("pagePath2", "pagePath")])
+# deduped.data = fake[!duplicated(fake$pagePath2),]
+df_final= data.table()
+df2 = data.table()
+web_df= data.table()
+unique(df1.obs_day)
 errorlist=list()
-
 #df1$date <- NULL
-for(i in 1:nrow(df1)){
+loops=nrow(df1)
+
+for(i in 1:loops){
 	tryCatch({
 			row_numb = i 
 			url=df1$pagePath[i]
-			#url='www.cato.org/blog/lack-zoning-not-houstons-problem?goal=0_395878584c-1af3773aff-143016961&mc_cid=1af3773aff&mc_eid=3fd7404a34'
-			#url='www-cato-org.myaccess.library.utoronto.ca/blog/race-amazon-headquarters-should-be-race-reform-zoning'
-			#url='http://fanyi.ydstatic.com/translate_url?rurl=http://fanyi.youdao.com/&url=http://www.cato.org/events/lessons-baltimore&type=en2zh_cn&usg=youdaowebfanyi-2576355379943872353m41197286&keyfrom=webfanyi.changelink'
-			#url='translate.baiducontent.com/transpage?cb=translatecallback&ie=utf8&source=url&query=https://www.cato.org/publications/tax-budget-bulletin/low-income-housing-tax-credit-costly-complex-corruption-prone&from=en&to=zh&token=&monlang=zh'
-			#url='0-www.cato.org.skyline.ucdenver.edu/publications/commentary/new-war-poverty'
-
-			url= gsub(".*www.cato.org", "www.cato.org", url)
-			url= gsub(pattern=".*https://*|&.*","",x=url)
-			url= gsub(pattern="[?].*","",x=url)
-			url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
-			#print(url)
-			url= gsub(pattern=".*www-cato-org",replacement="www.cato.org",x=url,perl=TRUE)
-			url= gsub(pattern=".*www.cato.org.*?/publications",replacement="www.cato.org/publications",x=url,perl=TRUE)
-			url= gsub("\\.myaccess.library.utoronto.ca", "", url, perl=TRUE)
-			url= gsub("proxy.earlham.edu", "www.cato.org", url, perl=TRUE)
-			
-			#print(url)
 			html<-getURL(url,followlocation=TRUE)
 			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 			parsed=htmlParse(html)
@@ -205,20 +175,15 @@ for(i in 1:nrow(df1)){
 			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
 			type_2 = gsub('-', " ", type_2)
 			type=ifelse((type=="publications"), type_2, type)
-			web_df=data.frame(title=title, type=type,row_numb=row_numb 
-																					#body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))),pub_date=pub_date
-																					#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
-																					#days_90=days_90, year_1=year_1, days_10=days_10
-																					)
-			df2 <- rbind(df2, web_df)
+			web_df=data.frame(title=title, type=type,row_numb=row_numb )
+			df2 <- rbind(df2, web_df, fill=TRUE)
+			print(row_numb)
 	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")
-		list=append(errorlist, url)})
+		errorlist=append(errorlist, url)})
 }
-
 #Combine Initial Loop of text into ga data
 df_intermediate <- cbind(df1, df2)
 df_intermediate<-df_intermediate[!(df_intermediate$type=="cc.bingj.com"),]
-
 # Extract web content from Cato Website
 df3= data.frame()
 text_content <- df_intermediate %>%
@@ -229,10 +194,10 @@ for(i in 1:nrow(text_content)){
 	tryCatch({
 	row_count = i
 	url=text_content$pagePath[i]
-	url= gsub(pattern=".*https://*|&.*","",x=url)
-	url= gsub(pattern="[?].*","",x=url)
-	url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
-	url= gsub(pattern=".*www-cato-org.myaccess.library.utoronto.ca",replacement="www.cato.org",x=url)
+	# url= gsub(pattern=".*https://*|&.*","",x=url)
+	# url= gsub(pattern="[?].*","",x=url)
+	# url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
+	# url= gsub(pattern=".*www-cato-org.myaccess.library.utoronto.ca",replacement="www.cato.org",x=url)
 	html<-getURL(url,followlocation=TRUE)
 	html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
 	parsed=htmlParse(html)
@@ -263,14 +228,9 @@ topics =  gsub("\n", ' ', topics)
 topics=as.list(strsplit(topics, '\\,+')[[1]])
 topics=trimws(as.list(topics))
 topics=as.list(topics)
-content_df=data.frame(
-																		#title=title, type=type, pub_date=pub_date,row_count=row_count, days_90=days_90, year_1=year_1, days_10=days_10
-																		body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))), pub_date=pub_date
-																		#co_authors=co_authors,collaboration_yn=collaboration_yn,primary_author=primary_author,
-																		)
+content_df=data.frame(	body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))), pub_date=pub_date)
 df3 <- rbind(df3, content_df)
-	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")})
-}
+	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")})}
 
 # Text Analysis	- Generate Text Wall	
 text_wall <- df3 %>%
@@ -349,6 +309,8 @@ df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$days_10=df_final$pub_date+days(10)
 df_final$days_90=df_final$pub_date+days(90)
 df_final$year_1=df_final$pub_date+years(1)
+
+
 
 save(df_final, file = "GA_MDT(5-9-18).RData")
 save(save_docs, file = "save_docs(Tanner).RData")
