@@ -23,7 +23,8 @@ library(foreach)
 library(stringr)
 library(ggplot2)
 library(lubridate)
-library(data.table)
+#library(data.table)
+library(pbmcapply)
 #library(plyr)
 
 
@@ -45,13 +46,13 @@ ga_id <- account_list$viewId[1]
 #
 
 name="Alex Nowrasteh"
-name="Michael D. Tanner"
+#name="Michael D. Tanner"
 
 name=as.character(name)
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
-from <- "2018-03-01"
+from <- "2018-01-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -140,100 +141,77 @@ df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath
 refcols <- c("obs_day", 'pagePath', 'pagePath2') 
 df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
 
-df1 = setDT(df1)
-df1.pagePath1=df1.pagePath
-df1.pagePath=df1.pagePath2
-df1.pagePath2=NULL
+df1$pagePath1=df1$pagePath
+df1$pagePath=df1$pagePath2
+df1$pagePath2=NULL
 
 # fake=unique(df1[df1$pagePath2 != df1$pagePath, c("pagePath2", "pagePath")])
 # deduped.data = fake[!duplicated(fake$pagePath2),]
 df_final= data.table()
-df2 = data.table()
 web_df= data.table()
-unique(df1.obs_day)
-errorlist=list()
-#df1$date <- NULL
-loops=nrow(df1)
+df1$ID <- seq.int(nrow(df1))
+url_vector=df1[["pagePath"]]
+responses <- pbmclapply(url_vector, GET) 
 
-for(i in 1:loops){
-	tryCatch({
-			row_numb = i 
-			url=df1$pagePath[i]
-			html<-getURL(url,followlocation=TRUE)
-			html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
-			parsed=htmlParse(html)
-			root=xmlRoot(parsed)
-# Generate Title
-			title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
-			if (length(title)==0){title = 0	}
-# Grab Publication Date
-			#pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
-			#if (length(pub_date)==0){pub_date=0}
-#Grab Media type
-			type = gsub('www.cato.org*/|/.*', "\\1", url)
-			type = gsub('-', " ", type)
-			type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
-			type_2 = gsub('-', " ", type_2)
-			type=ifelse((type=="publications"), type_2, type)
-			web_df=data.frame(title=title, type=type,row_numb=row_numb )
-			df2 <- rbind(df2, web_df, fill=TRUE)
-			print(row_numb)
-	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")
-		errorlist=append(errorlist, url)})
-}
-#Combine Initial Loop of text into ga data
-df_intermediate <- cbind(df1, df2)
-df_intermediate<-df_intermediate[!(df_intermediate$type=="cc.bingj.com"),]
+title = pbmclapply(responses, function (filename) {
+	doc = htmlParse(filename)
+	plain_text = xpathSApply(doc, "//h1[@class='page-h1'][1]", xmlValue)})
+web_df=data.frame(cbind(title=title))
+df_intermediate <- cbind(df1, web_df)
+
+type_list <- pbmclapply(url_vector, function(url){
+																type = gsub('www.cato.org*/|/.*', "\\1", url)
+																type = gsub('-', " ", type)
+																type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
+																type_2 = gsub('-', " ", type_2)
+																type=ifelse((type=="publications"), type_2, type)
+})
+type_df=data.frame(cbind(type=type_list))
+df_intermediate <- cbind(df_intermediate, type_df)
+
 # Extract web content from Cato Website
 df3= data.frame()
 text_content <- df_intermediate %>%
 	distinct(pagePath, title, type)
 text_content=text_content[!duplicated(text_content),]
 
-for(i in 1:nrow(text_content)){
-	tryCatch({
-	row_count = i
-	url=text_content$pagePath[i]
-	# url= gsub(pattern=".*https://*|&.*","",x=url)
-	# url= gsub(pattern="[?].*","",x=url)
-	# url= gsub(pattern=".*genius.it/*|&.*",replacement="",x=url)
-	# url= gsub(pattern=".*www-cato-org.myaccess.library.utoronto.ca",replacement="www.cato.org",x=url)
-	html<-getURL(url,followlocation=TRUE)
-	html= gsub(pattern = "Recent Cato Daily Podcast.*<h4", replacement = "", x = html)
-	parsed=htmlParse(html)
-	root=xmlRoot(parsed)
-# Manipulate Body for Text Analyses			
-body = xpathSApply(root, "//div[@class='field-body'][1]", xmlValue)
-body =  gsub('\nNotes\n.*', '', body)
-body =  gsub("\n", ' ', body)
-body=trimws(body)
-if (length(body)==0){body = 0	}
-# Text Analysis			
-#if (i==1){save_docs <- body} else{save_docs = paste(save_docs,body)}
-body_count=sapply(gregexpr("[[:alpha:]]+", body), function(x) sum(x > 0))
-if (length(body_count)==0){body_count = 0	}
-# Grab Publication Date
-pub_date=xpathSApply(root,"//meta[@name='publication_date'][1]",xmlGetAttr,'content')
-if (length(pub_date)==0){pub_date=0}
-# Tags and Topics
-tags = xpathSApply(root, "//div[@class='field-tags inline']", xmlValue)
-if (length(tags)==0){tags = 0	}
-tags =  gsub("\n", ' ', tags)
-tags=as.list(strsplit(tags, '\\,+')[[1]])
-tags=trimws(as.list(tags))
-tags=as.list(tags)
-topics = xpathSApply(root, "//div[@class='field-topics inline']", xmlValue)
-if (length(topics)==0){topics = 0	} #else {topics=list(topics)}
-topics =  gsub("\n", ' ', topics)
-topics=as.list(strsplit(topics, '\\,+')[[1]])
-topics=trimws(as.list(topics))
-topics=as.list(topics)
-content_df=data.frame(	body_count=body_count,	body=body,tags=I(list(c(tags))),topics=I(list(c(topics))), pub_date=pub_date)
-df3 <- rbind(df3, content_df)
-	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url, "\n")})}
+text_url_vector=text_content[["pagePath"]]
+text_responses <- pbmclapply(text_url_vector, GET) 
 
+body_vector = pbmclapply(text_responses, function (filename) {
+	doc = htmlParse(filename)
+	body = xpathSApply(doc, "//div[@class='field-body'][1]", xmlValue)
+	body =  gsub('\nNotes\n.*', '', body)
+	body =  gsub("\n", ' ', body)
+	body=trimws(body)
+})
+
+body_count=pbmclapply(gregexpr("[[:alpha:]]+", body_vector), function(x) sum(x > 0))
+
+pub_date_output = pbmclapply(text_responses, function (filename) {
+	doc = htmlParse(filename)
+	pub_date = xpathSApply(doc, "//meta[@name='publication_date'][1]",xmlGetAttr,'content')
+})
+
+tags_output = pbmclapply(text_responses, function (filename) {
+	doc = htmlParse(filename)
+	tags = xpathSApply(doc, "//div[@class='field-tags inline']", xmlValue)
+	tags =  gsub("\n", ' ', tags)
+	#tags=(strsplit(tags, '\\,+')[[1]])
+	tags=trimws((tags))})
+	
+	topics_output = pbmclapply(text_responses, function (filename) {
+		doc = htmlParse(filename)
+		topics = xpathSApply(doc, "//div[@class='field-topics inline']", xmlValue)
+		topics =  gsub("\n", ' ', topics)
+		#topics=(strsplit(topics, '\\,+')[[1]])
+		topics=trimws((topics))})
+
+	text_df=data.frame(cbind(body=body_vector,body_count=body_count,topics=topics_output,tags=tags_output,pub_date=pub_date_output ))
+	text_stats <- cbind(text_content, text_df)
+	
 # Text Analysis	- Generate Text Wall	
-text_wall <- df3 %>%
+text_wall <- text_df %>%
 	distinct(title, body,tags)
 text_wall=text_wall[!duplicated(text_wall),]
 for(i in 1:nrow(text_content)){
@@ -335,14 +313,17 @@ doc <- tm_map(doc, toNothing, "–")
 doc <- tm_map(doc, removeWords, stopwords("english"))
 doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one'))
 # creating of document matrix
-tdm <- TermDocumentMatrix(doc)
+tdm <- TermDocumentMatrix(doc, control = list(stemming = TRUE))
+#tdm <- TermDocumentMatrix(myCorpus, control = list(stemming = TRUE)) 
+tdm=cbind(stems = rownames(tdm), completed = stemCompletion(rownames(tdm), doc))  
 m <- as.matrix(tdm)
+
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
 head(d, 10)
 set.seed(12)
 cloud=wordcloud(words = d$word, freq = d$freq, min.freq = 3,	max.words=150, 
-										random.order = FALSE,rot.per=.35,vfont=c("sans serif","plain"),
+										random.order = FALSE,rot.per=.05,vfont=c("sans serif","plain"),
 										colors=brewer.pal(8, "Dark2"))
 
 
