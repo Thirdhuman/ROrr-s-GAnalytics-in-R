@@ -8,8 +8,8 @@ output:
 ---
 ```{r, include=FALSE}
 # Open Data
-load( file = "GA_VBC(5-6-18).RData")
-load( file = "save_docs.RData")
+load( file = "AlNo(0118-0518).RData")
+load( file = "save_docs(Nowrasteh).RData")
 #Load Dependencies
 library(tinytex)
 library(wordcloud)
@@ -69,7 +69,7 @@ doc <- tm_map(doc, toNothing, "-")
 doc <- tm_map(doc, toNothing, "—")
 doc <- tm_map(doc, toNothing, "–")
 doc <- tm_map(doc, removeWords, stopwords("english"))
-doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one'))
+doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one', 'NA', 'immigrants'))
 # creating of document matrix
 tdm <- TermDocumentMatrix(doc)
 m <- as.matrix(tdm)

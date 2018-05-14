@@ -7,6 +7,8 @@
 #Intro to text analysis
 #https://www.r-bloggers.com/intro-to-text-analysis-with-r/
 
+setwd("~/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)")
+
 # Fonts
 library(extrafont)
 font_import()
@@ -22,22 +24,14 @@ library(XML)
 library(foreach)
 library(stringr)
 library(ggplot2)
-library(lubridate)
-#library(data.table)
+#library(lubridate)
+library(data.table)
 library(pbmcapply)
 #library(plyr)
 
-
-# Functions
-simpleCap <- function(x) {
-	s <- strsplit(x, " ")[[1]]
-	if (!is.na(s[1])) {
-		return(paste(toupper(substring(s, 1, 1)), substring(s, 2), sep = "", collapse = " "))} else {
-		return(NA)}}
-
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
-current_date=ymd(current_date)
+current_date=as.Date(current_date)
 # Open Google Analytics
 account_list <- ga_account_list()
 ga_id <- account_list$viewId[1]
@@ -48,27 +42,47 @@ ga_id <- account_list$viewId[1]
 name="Alex Nowrasteh"
 #name="Michael D. Tanner"
 
+lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
+df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
+
 name=as.character(name)
+last_name=str_extract(name,'[^ ]+$')
+
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
-from <- "2018-01-01"
+from <- "2015-05-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
 dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
-fc2 <- filter_clause_ga4(list(dimf
-																														#,dimf2
+fc2 <- filter_clause_ga4(list(dimf #,dimf2
 																														), operator = "OR")
 
+# Build file name
+from_s = (from)
+from_m = as.character(from)
+from_y=str_sub(from, start=3, end = 4)
+from_m=str_sub(from, start=6, end = 7)
+to_y=str_sub(to, start=3, end = 4)
+to_m=str_sub(to, start=6, end = 7)
+analysis_range=paste0("(",from_m,from_y,'-',to_m,to_y,")")
+initials <- function(a, b){
+	a <- str_split(a, "&")
+	a1 <- lapply(a, function(x){
+		x1 <- str_split(str_trim(x), " ")
+		paste0(unlist(lapply(x1, str_sub, 1, 2)), collapse="")
+	})
+	paste0(unlist(a1), b) 
+}
+analysis_identifier=initials(name,analysis_range)
 ## Specify Search terms
 max = 5000000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
 								"entrances","bounces", 'exitRate')
-dim = c(
-								"date", 
+dim = c("date", 
 								"ga:dimension1", 
 								#'ga:dimension2', 
 								#'region',
@@ -76,7 +90,7 @@ dim = c(
 								'pagePath'
 								)
 # the function
-df2 = data.table()
+df2 = data.frame()
 get_data <- function(vid, from, to, dim, met, max) {
   df <- google_analytics(viewId = vid, date_range = c(from, to), metrics = met,  dimensions = dim,
               #met_filters = fc, 
@@ -94,14 +108,14 @@ get_data <- function(vid, from, to, dim, met, max) {
 																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
 df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
-save(gadata, file = "Last_Raw_GA_DAT.RData")
+save(gadata, file = "Last_Raw_GA_DAT3.RData")
 #######
-load( file = "Last_Raw_GA_DAT.RData")
+load( file = "Last_Raw_GA_DAT3.RData")
 #str(gadata)
 #######
-df1 = (gadata)
+df1 = as.data.frame(gadata)
 rm(gadata)
-df1$obs_day=ymd(df1$date)
+df1$obs_day=as.Date(df1$date)
 df1$date<-NULL
 # 
 df1 <- df1[!grepl("search/srpcache", df1$pagePath),]
@@ -119,6 +133,11 @@ df1 <- df1[!grepl("www.duplichecker.com", df1$pagePath),]
 df1 <- df1[!grepl("copyscape", df1$pagePath),]
 df1 <- df1[!grepl("us1.proxysite", df1$pagePath),]
 df1 <- df1[!grepl("eveil.alize", df1$pagePath),]
+df1 <- df1[!grepl("honyaku.yahoofs.jp", df1$pagePath),]
+df1 <- df1[!grepl("ow.ly", df1$pagePath),]
+df1 <- df1[!grepl("searchenginereports.net", df1$pagePath),]
+df1 <- df1[!grepl("xitenow", df1$pagePath),]
+
 
 df1$pagePath2= gsub(".*www.cato.org", "www.cato.org", df1$pagePath)
 df1$pagePath2= gsub(pattern="[?].*","",x=df1$pagePath2)
@@ -132,9 +151,11 @@ df1$pagePath2= gsub("object.cato.org", "www.cato.org", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub("seekingalpha.com", "www.cato.org", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub(".ezproxy.wallawalla.edu", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub(".stfi.re", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2= gsub(".helin.uri.edu", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub(".proxy.lib.pdx.edu", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub("www.cato.org:80", "www.cato.org", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("www.cato-at-liberty.org", "www.cato.org/blog", df1$pagePath2, perl=TRUE) # Index.html 
+df1$pagePath2= gsub("www.cato/", "www.cato.org/", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("index.html", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2,perl=TRUE)  
 df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath2)
@@ -145,19 +166,79 @@ df1$pagePath1=df1$pagePath
 df1$pagePath=df1$pagePath2
 df1$pagePath2=NULL
 
-# fake=unique(df1[df1$pagePath2 != df1$pagePath, c("pagePath2", "pagePath")])
-# deduped.data = fake[!duplicated(fake$pagePath2),]
-df_final= data.table()
-web_df= data.table()
+df_final= data.frame()
+web_df= data.frame()
 df1$ID <- seq.int(nrow(df1))
 url_vector=df1[["pagePath"]]
-responses <- pbmclapply(url_vector, GET) 
+
+#vectors=split(url_vector, ceiling(seq_along(url_vector)/20))
+#set_config(use_proxy(url="10.3.100.207",port=8080))
+ 
+converter=	function (x ){
+vex=url_vector[(0):(15000+x)]
+paste0('vex',x) <- pbmclapply(vex, GET) }
+
+
+test=(unique(url_vector))
+
+url_list=list(url_vector)
+
+# j=c(0,1:11.73333, 11.73333)
+# # 
+# # for (x in j {
+# # 	vex=url_vector[(1+(x):(15000+x)]
+# # 	paste0('vex',x) <- pbmclapply(vex, GET)
+# # 	(group)})
+# # 
+# # #
+# # # 176000/11.73333
+# # # 11.73333
+# # # 15000
+# # #
+# # 
+# # 176000/15000
+#  
+
+#test=as.list(test)
+t_responses <- pbmclapply(test, GET) 
+
+responses <- pbmclapply(url_list, GET) 
+unique(responses)
+
+func1 <- function(vex){
+	vex + seq_along(vex)
+}
+func1(url_vector)
+
+nrow(test)
+for(value in seq_along(test)){
+	tryCatch({
+		url_mine=test[value]
+		html<-getURL(url_mine,followlocation=TRUE)
+		parsed=htmlParse(html)
+		root=xmlRoot(parsed)
+		title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
+		#print("________________________")
+		#print(url_mine)
+		#print(title)
+		if (length(title)==0){title = 0	}
+	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url_mine, "\n")})
+}
+
+
 
 title = pbmclapply(responses, function (filename) {
 	doc = htmlParse(filename)
 	plain_text = xpathSApply(doc, "//h1[@class='page-h1'][1]", xmlValue)})
 web_df=data.frame(cbind(title=title))
 df_intermediate <- cbind(df1, web_df)
+
+my_url='http://proxy.unfake.us/proxy/350/two-problems-with-the-cbos-score-of-the-dream-act-and-one-solution/'
+
+test = pbmclapply(my_url, function (filename) {
+	doc = htmlParse(filename)
+		test_tex = xpathSApply(doc, "//link[@href='page-h1'][3]", xmlValue)
+print(plain_text)})
 
 type_list <- pbmclapply(url_vector, function(url){
 																type = gsub('www.cato.org*/|/.*', "\\1", url)
@@ -174,7 +255,6 @@ df3= data.frame()
 text_content <- df_intermediate %>%
 	distinct(pagePath, title, type)
 text_content=text_content[!duplicated(text_content),]
-
 text_url_vector=text_content[["pagePath"]]
 text_responses <- pbmclapply(text_url_vector, GET) 
 
@@ -183,15 +263,12 @@ body_vector = pbmclapply(text_responses, function (filename) {
 	body = xpathSApply(doc, "//div[@class='field-body'][1]", xmlValue)
 	body =  gsub('\nNotes\n.*', '', body)
 	body =  gsub("\n", ' ', body)
-	body=trimws(body)
-})
-
+	body=trimws(body)})
 body_count=pbmclapply(gregexpr("[[:alpha:]]+", body_vector), function(x) sum(x > 0))
 
 pub_date_output = pbmclapply(text_responses, function (filename) {
 	doc = htmlParse(filename)
-	pub_date = xpathSApply(doc, "//meta[@name='publication_date'][1]",xmlGetAttr,'content')
-})
+	pub_date = xpathSApply(doc, "//meta[@name='publication_date'][1]",xmlGetAttr,'content')})
 
 tags_output = pbmclapply(text_responses, function (filename) {
 	doc = htmlParse(filename)
@@ -227,7 +304,6 @@ toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
 toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
 
 
-text_stats <- cbind(text_content, df3)
 text_stats$row_count = NULL
 ## Text Analysis - Top Terms ##
 for(k in 1:nrow(text_stats)){
@@ -243,7 +319,7 @@ for(k in 1:nrow(text_stats)){
 	keywords_doc <- tm_map(keywords_doc, stripWhitespace)
 	keywords_doc <- tm_map(keywords_doc, removePunctuation)
 	keywords_doc <- tm_map(keywords_doc, removeWords, stopwords("english"))
-	keywords_doc <- tm_map(keywords_doc, removeWords, c("the", "can",'did','like', 'and')) 
+	keywords_doc <- tm_map(keywords_doc, removeWords, c("the", "can",'did','like', 'one', 'and', 'use', 'NA')) 
 	dtm <- DocumentTermMatrix(keywords_doc)
 	dtm <- removeSparseTerms(dtm, 0.96)
 	top_terms=findMostFreqTerms(dtm, n = 20L)
@@ -251,11 +327,20 @@ for(k in 1:nrow(text_stats)){
 	text_stats$top_terms[k]=paste(colnames(top_terms)[1:15],sep="|-|", collapse=", ")
 	}
 ## Generate Author's Custom Categories ##
-unique(text_stats$top_terms[1:12])
+unique(text_stats$top_terms[1:50])
+
+
 
 # Michael D. Tanner Categories
-category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism')
-category_2=c('social', 'security', 'medicare','retirement','liabilities', 'entitlements', 'debt')
+#category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism')
+#category_2=c('social', 'security', 'medicare','retirement','liabilities', 'entitlements', 'debt')
+
+#Alex Nowrasteh Categories
+category_1=c('terrorist', 'terrorism', 'muslim', 'security')
+category_2=c('murder', 'crime','murdered', 'incarceration', 'prison','criminality')
+category_3=c('assimilation', 'generation','descendants', 'generations','vote')
+category_4=c('jobs', 'employment', 'worker','economic','bracero','workers', 'employmentbased','income', 'wage')
+category_5=c('benefits', 'debt', 'welfare','entitlements','deficits', 'fiscal')
 
 # Vanessa B. Calder Categories
 #category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
@@ -263,36 +348,46 @@ category_2=c('social', 'security', 'medicare','retirement','liabilities', 'entit
 #category_3=c('women', 'family', 'leave','gender','gap')
 #category_4=c('women', 'family', 'leave','gender','gap')
 
-
 ## Generate 
 unique(df_final$co_authors)
 
-text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
-											ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues","Other"))
+text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
+																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
+																		ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
+																		ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Economy/Employment",
+																		ifelse(grepl(paste(category_5, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Fiscal/Welfare",
+																		"Other")))))
 
-text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
- 				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
+# text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
+#  				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
 
 df_final=merge(df_intermediate, text_stats)
-df_final=df_final[!is.na(df_final$title),]
 
+df_final=df_final[!is.na(df_final$title),]
+df_final=as.data.frame(df_final)
+sapply(df_final, class)
+
+df_final$body_count=as.numeric(df_final$body_count)
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
 df_final$type=as.character(df_final$type)
 df_final$one=1
 
-df_final$pub_date=ymd(df_final$pub_date)
+sapply(df_final, class)
+df_final$title=as.character(df_final$title)
+df_final$topics=as.character(df_final$topics)
+df_final$tags=as.character(df_final$tags)
+df_final$body=as.character(df_final$body)
+
+
+df_final$pub_date=as.character(df_final$pub_date)
+df_final$pub_date=as.Date(df_final$pub_date)
+
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 
-### Generate time period dates ###
-df_final$days_10=df_final$pub_date+days(10)
-df_final$days_90=df_final$pub_date+days(90)
-df_final$year_1=df_final$pub_date+years(1)
-
-
-
-save(df_final, file = "GA_MDT(5-9-18).RData")
-save(save_docs, file = "save_docs(Tanner).RData")
-
+save(df_final, file = paste0(analysis_identifier,".RData"))
+save(save_docs, file = paste0("save_docs(",last_name,").RData"))
+print(paste0(analysis_identifier,".RData"))
+print(paste0("save_docs(",last_name,").RData"))
 
 ## Qualitative Text Analyses ##
 #custom_bigram <- content_transformer(function (x , pattern ) gsub(pattern, "paid_leave", x))
@@ -315,8 +410,8 @@ doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one
 # creating of document matrix
 tdm <- TermDocumentMatrix(doc, control = list(stemming = TRUE))
 #tdm <- TermDocumentMatrix(myCorpus, control = list(stemming = TRUE)) 
-tdm=cbind(stems = rownames(tdm), completed = stemCompletion(rownames(tdm), doc))  
-m <- as.matrix(tdm)
+tes=cbind(stems = rownames(tdm), completed = stemCompletion(rownames(tdm), doc))  
+m <- as.matrix(tes)
 
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
