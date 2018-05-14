@@ -76,6 +76,8 @@ initials <- function(a, b){
 	paste0(unlist(a1), b) 
 }
 analysis_identifier=initials(name,analysis_range)
+
+
 ## Specify Search terms
 max = 5000000
 met = c("sessions",
@@ -137,7 +139,7 @@ df1 <- df1[!grepl("honyaku.yahoofs.jp", df1$pagePath),]
 df1 <- df1[!grepl("ow.ly", df1$pagePath),]
 df1 <- df1[!grepl("searchenginereports.net", df1$pagePath),]
 df1 <- df1[!grepl("xitenow", df1$pagePath),]
-
+df1 <- df1[!grepl("cato.us1.list-manage.com/track/click", df1$pagePath),]
 
 df1$pagePath2= gsub(".*www.cato.org", "www.cato.org", df1$pagePath)
 df1$pagePath2= gsub(pattern="[?].*","",x=df1$pagePath2)
@@ -174,71 +176,48 @@ url_vector=df1[["pagePath"]]
 #vectors=split(url_vector, ceiling(seq_along(url_vector)/20))
 #set_config(use_proxy(url="10.3.100.207",port=8080))
  
-converter=	function (x ){
-vex=url_vector[(0):(15000+x)]
-paste0('vex',x) <- pbmclapply(vex, GET) }
-
-
 test=(unique(url_vector))
+short_url_vector=url_vector[1:50]
 
-url_list=list(url_vector)
-
-# j=c(0,1:11.73333, 11.73333)
-# # 
-# # for (x in j {
-# # 	vex=url_vector[(1+(x):(15000+x)]
-# # 	paste0('vex',x) <- pbmclapply(vex, GET)
-# # 	(group)})
-# # 
-# # #
-# # # 176000/11.73333
-# # # 11.73333
-# # # 15000
-# # #
-# # 
-# # 176000/15000
-#  
-
-#test=as.list(test)
-t_responses <- pbmclapply(test, GET) 
-
-responses <- pbmclapply(url_list, GET) 
-unique(responses)
-
-func1 <- function(vex){
-	vex + seq_along(vex)
-}
-func1(url_vector)
-
-nrow(test)
-for(value in seq_along(test)){
+SafeGet = function (x)	{
 	tryCatch({
-		url_mine=test[value]
-		html<-getURL(url_mine,followlocation=TRUE)
-		parsed=htmlParse(html)
-		root=xmlRoot(parsed)
-		title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
-		#print("________________________")
-		#print(url_mine)
-		#print(title)
-		if (length(title)==0){title = 0	}
-	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url_mine, "\n")})
-}
+	#	short_url_vector
+	html=GET(x)
+	parsed=htmlParse(html)
+	root=xmlRoot(parsed)
+	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
+	return(title)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
-
-
-title = pbmclapply(responses, function (filename) {
-	doc = htmlParse(filename)
-	plain_text = xpathSApply(doc, "//h1[@class='page-h1'][1]", xmlValue)})
+responses <- pbmclapply(url_vector, SafeGet, mc.preschedule=T)
+title=trimws(responses)
+save(title, file = "Title_Vector.RData")
+#######
+load( file = "Title_Vector.RData")
 web_df=data.frame(cbind(title=title))
-df_intermediate <- cbind(df1, web_df)
+df_intermediate = cbind(df1, web_df)
 
-my_url='http://proxy.unfake.us/proxy/350/two-problems-with-the-cbos-score-of-the-dream-act-and-one-solution/'
 
-test = pbmclapply(my_url, function (filename) {
-	doc = htmlParse(filename)
-		test_tex = xpathSApply(doc, "//link[@href='page-h1'][3]", xmlValue)
-print(plain_text)})
+# 
+# nrow(test)
+# for(value in seq_along(responses)){
+# 	tryCatch({
+# 		url_mine=test[value]
+# 		html<-getURL(url_mine,followlocation=TRUE)
+# 		parsed=htmlParse(html)
+# 		root=xmlRoot(parsed)
+# 		title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
+# 		#print("________________________")
+# 		#print(url_mine)
+# 		#print(title)
+# 	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url_mine, "\n")})
+# }
+# 
+# title = pbmclapply(responses, function (filename) {
+# 	doc = htmlParse(filename)
+# 	plain_text = xpathSApply(doc, "//h1[@class='page-h1'][1]", xmlValue)})
+# web_df=data.frame(cbind(title=title))
+# df_intermediate <- cbind(df1, web_df)
 
 type_list <- pbmclapply(url_vector, function(url){
 																type = gsub('www.cato.org*/|/.*', "\\1", url)
