@@ -159,7 +159,10 @@ df1$pagePath2= gsub("www.cato.org:80", "www.cato.org", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub("www.cato-at-liberty.org", "www.cato.org/blog", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("www.cato/", "www.cato.org/", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("index.html", "", df1$pagePath2, perl=TRUE)
-df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2,perl=TRUE)  
+df1$pagePath2= gsub(".jpllnet.sfsu.edu", "", df1$pagePath2, perl=TRUE)
+df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2) 
+df1$pagePath2= gsub(".ezproxy.csusm.edu", "", df1$pagePath2, perl=TRUE) # Index.html 
+df1$pagePath2= gsub("proxy.unfake.us/proxy/350/", "www.cato.org/blog/", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath2)
 refcols <- c("obs_day", 'pagePath', 'pagePath2') 
 df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
@@ -173,11 +176,6 @@ web_df= data.frame()
 df1$ID <- seq.int(nrow(df1))
 url_vector=df1[["pagePath"]]
 
-#vectors=split(url_vector, ceiling(seq_along(url_vector)/20))
-#set_config(use_proxy(url="10.3.100.207",port=8080))
- 
-test=(unique(url_vector))
-short_url_vector=url_vector[1:50]
 
 SafeGet = function (x)	{
 	tryCatch({
@@ -196,7 +194,6 @@ save(title, file = "Title_Vector.RData")
 load( file = "Title_Vector.RData")
 web_df=data.frame(cbind(title=title))
 df_intermediate = cbind(df1, web_df)
-
 
 # 
 # nrow(test)
@@ -253,14 +250,12 @@ tags_output = pbmclapply(text_responses, function (filename) {
 	doc = htmlParse(filename)
 	tags = xpathSApply(doc, "//div[@class='field-tags inline']", xmlValue)
 	tags =  gsub("\n", ' ', tags)
-	#tags=(strsplit(tags, '\\,+')[[1]])
 	tags=trimws((tags))})
 	
 	topics_output = pbmclapply(text_responses, function (filename) {
 		doc = htmlParse(filename)
 		topics = xpathSApply(doc, "//div[@class='field-topics inline']", xmlValue)
 		topics =  gsub("\n", ' ', topics)
-		#topics=(strsplit(topics, '\\,+')[[1]])
 		topics=trimws((topics))})
 
 	text_df=data.frame(cbind(body=body_vector,body_count=body_count,topics=topics_output,tags=tags_output,pub_date=pub_date_output ))
@@ -281,7 +276,6 @@ library(topicmodels)
 library(quanteda)
 toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
 toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
-
 
 text_stats$row_count = NULL
 ## Text Analysis - Top Terms ##
@@ -307,8 +301,6 @@ for(k in 1:nrow(text_stats)){
 	}
 ## Generate Author's Custom Categories ##
 unique(text_stats$top_terms[1:50])
-
-
 
 # Michael D. Tanner Categories
 #category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism')
@@ -342,26 +334,33 @@ text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text
 
 df_final=merge(df_intermediate, text_stats)
 
-df_final=df_final[!is.na(df_final$title),]
-df_final=as.data.frame(df_final)
+# Fix broken classes
 sapply(df_final, class)
+df_final$title=as.character(df_final$title)
+df_final$topics=as.character(df_final$topics)
+df_final$tags=as.character(df_final$tags)
+df_final$body=as.character(df_final$body)
+df_final$pub_date=as.character(df_final$pub_date)
 
 df_final$body_count=as.numeric(df_final$body_count)
 df_final$avg_MinPerWord=(df_final$avgTimeOnPage/df_final$body_count)
 df_final$type=as.character(df_final$type)
 df_final$one=1
 
-sapply(df_final, class)
-df_final$title=as.character(df_final$title)
-df_final$topics=as.character(df_final$topics)
-df_final$tags=as.character(df_final$tags)
-df_final$body=as.character(df_final$body)
-
-
-df_final$pub_date=as.character(df_final$pub_date)
+# Fixes - This needs to be substantially filled in
+df_finalt=df_final[!(df_final$title==length(0)),]
+setDT(df_final)
+df_final <- df_final[,n:=.N,type][n>10,,][,n:=NULL]
+#unique(df_final$type)
 df_final$pub_date=as.Date(df_final$pub_date)
-
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
+
+df_final$collaboration_yn=ifelse(df_final$author==df_final$author_full,"Sole Author",
+						ifelse(df_final$author!=df_final$author_full|!is.na(df_final$co_authors),"Co-Authored",0))
+
+unique(df_final$co_authors)
+df_final$co_authors=gsub("^,*|(?<=,),|,*$", "", df_final$co_authors, perl=T)
+
 
 save(df_final, file = paste0(analysis_identifier,".RData"))
 save(save_docs, file = paste0("save_docs(",last_name,").RData"))
