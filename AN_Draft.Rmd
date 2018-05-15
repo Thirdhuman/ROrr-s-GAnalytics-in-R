@@ -1,0 +1,333 @@
+---
+title: |
+  | \vspace{4cm} \LARGE{"WIP - Web Content Report"}
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+```{r, include=FALSE}
+# Open Data
+load( file = "AlNo(0515-0518).RData")
+load( file = "save_docs(Nowrasteh).RData")
+#Load Dependencies
+library(tinytex)
+library(wordcloud)
+library(topicmodels)
+library(googleAnalyticsR)
+library(dplyr)
+library(httr)
+library(extrafont)
+library(RCurl)
+library(XML)
+library(foreach)
+library(stringr)
+library(ggplot2)
+library(lubridate)
+library(quanteda)
+library(tm)
+
+loadfonts()
+
+#Read custom functions
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
+simpleCap <- function(x) {
+	s <- strsplit(x, " ")[[1]]
+	if (!is.na(s[1])) {return(paste(toupper(substring(s, 1, 1)), substring(s, 2), sep = "", collapse = " "))} else {
+		return(NA)}}
+my_theme <- function(){theme_light() +theme(text = element_text(family = "Open Sans"), legend.text.align = 0,
+		plot.title = element_text(size = 12, color = "gray30"),   # Set up the title style
+		plot.subtitle = element_text(size = 10, color = "black"), # Set up the subtitle style
+		plot.margin = unit(c(.05,.05,.05,.05), "cm"),                 # Add white space at the top and left
+		panel.grid = element_blank(),#panel.border = element_blank(),
+		axis.title = element_blank(),axis.ticks = element_blank(),#axis.text.x = element_blank(),
+		axis.text.y = element_text(size = 9, color = "gray10"))}
+current_date=format(Sys.time(), "%Y-%m-%d")
+current_date=ymd(current_date)
+
+#name="Vanessa Brown Calder"
+begin=min(df_final$obs_day)
+end=max(df_final$obs_day)
+name=df_final$author[1]
+name=as.character(name)
+name
+```
+
+
+```{r echo=FALSE, fig.align="center"}
+doc=Corpus(VectorSource(save_docs))
+doc <- tm_map(doc, removeNumbers)
+doc <- tm_map(doc, tolower)
+doc <- tm_map(doc, stripWhitespace)
+doc <- tm_map(doc, removePunctuation)
+doc <- tm_map(doc, PlainTextDocument)
+doc <- tm_map(doc, toSpace, "/")
+doc <- tm_map(doc, toSpace, "@")
+doc <- tm_map(doc, toSpace, "\\|")
+doc <- tm_map(doc, toNothing, "-")
+doc <- tm_map(doc, toNothing, "—")
+doc <- tm_map(doc, toNothing, "–")
+doc <- tm_map(doc, removeWords, stopwords("english"))
+doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one', 'NA', 'immigrants'))
+# creating of document matrix
+tdm <- TermDocumentMatrix(doc)
+m <- as.matrix(tdm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+#head(d, 10)
+set.seed(12)
+wordcloud(words = d$word, freq = d$freq, min.freq = 3,max.words=150,random.order = FALSE,rot.per=.35,vfont=c("sans serif","plain"),colors=brewer.pal(8, "Dark2"))
+
+```
+
+This is `r (name)`'s web analytics report from between the dates `r (begin)` and `r (end)`.
+
+\pagebreak
+
+**Total unique viewers by day (with top content on highly traffic days highlighted)**
+
+Colored by topic between the dates `r (begin)` and `r (end)`.
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=8}
+total_line =subset(df_final, type != "events"&type !="multimedia") # Remove events
+total_line=aggregate(sessions ~ title + author_categories + obs_day, total_line, sum)
+total_line$big_day <- ifelse(total_line$sessions > 5000, paste0(total_line$title,"(",as.character(total_line$obs_day),")"), "")
+
+title_big=aggregate(sessions~title+obs_day+big_day, total_line,function(x) x[which.max(abs(x))])
+title_big$label_point = T
+total_line=merge(total_line,title_big, all.x=T)
+
+line=total_line %>%
+ggplot(aes(x=obs_day,y=sessions,group=author_categories,colour=author_categories))+geom_line()+
+	theme(axis.text.x=element_text(angle=90,hjust = 1),legend.position="none")+my_theme()+
+	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())+
+	scale_y_continuous(expand = c(0, .3))
+library(ggrepel)
+line + geom_label_repel(data = subset(total_line %>% group_by(title) %>% top_n(n=1, sessions))
+												    ,	aes(label=big_day), size=3.5)+ theme(legend.position = "None")   # label
+```
+
+\pagebreak
+
+**Popular Co-Authors for `r (name)` (Multimedia Excluded)**
+
+```{r, echo=FALSE, message=FALSE,warning = FALSE, fig.height=5, fig.width=9}
+pie =subset(df_final,	type != "events"
+		  & type != "multimedia"
+		  & type != "cato online forum")
+library(ggforce) # for 'geom_arc_bar'
+pie$co_authors=trimws(pie$co_authors)
+pie$collaboration_yn=ifelse(pie$author==pie$author_full, "Sole Author",
+	ifelse(pie$author!=pie$author_full | !is.na(pie$co_authors), "Co-Authored",0))
+pie=pie[(pie$collaboration_yn)=='Co-Authored',]
+pie <- aggregate(one ~ co_authors, pie, sum)
+pie$per = pie$one/sum(pie$one)
+pie$label <- scales::percent(pie$per)
+library(dplyr)
+pie <- pie %>% 
+  mutate(end = 2 * pi * cumsum(per)/sum(per),
+         start = lag(end, default = 0),
+         middle = 0.5 * (start + end),
+         hjust = ifelse(middle > pi, 1, 0),
+         vjust = ifelse(middle < pi/2 | middle > 3 * pi/2, 0, 1))
+pie_chart=ggplot(pie)+ 
+geom_arc_bar( aes(x0 = 0, y0 = 0, r0 = 0, r = 1,start = start, end = end, fill = co_authors))+
+	geom_text(aes(x = 1.05 * sin(middle), y = 1.05 * cos(middle), label = label, hjust = hjust, vjust = vjust)) +
+	  coord_fixed() +
+  scale_x_continuous(limits = c(-1.5, 1.4), name = "", breaks = NULL, labels = NULL) +
+  scale_y_continuous(limits = c(-1, 1), name = "", breaks = NULL, labels = NULL)+ theme_void()+ xlab("")+ ylab("")
+pie_chart
+```
+
+
+**Count of published content by `r (name)`, colored by co-authorship**
+
+Simple count of authored and co-authored content over course of Cato career.  
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
+Bar_type_df =subset(df_final, type != "events" #| (type != 'multimedia' & co_authors == "Caleb Brown")
+																				) # Remove events
+Bar_type_df$collaboration_yn=ifelse(Bar_type_df$author!=Bar_type_df$author_full & length(Bar_type_df$author_full)!=0, "Co-Authored", ifelse(Bar_type_df$author==Bar_type_df$author_full, "Sole Author",0))
+Bar_type_df<-Bar_type_df %>% distinct(type,title,collaboration_yn,one)
+
+ggplot(data=Bar_type_df,aes(x=reorder(type,type, function(x)length(x)),y=one,fill=collaboration_yn))+
+ggtitle(sprintf("Total Content: %s",sum(Bar_type_df$one)), 
+subtitle=sprintf("",sum(Bar_type_df$one)))+coord_flip()+
+geom_bar(stat="identity", width=0.8)+ my_theme()+theme(legend.position="bottom", 
+legend.box = "horizontal")+theme(legend.title=element_blank())+
+	scale_y_continuous(expand = c(0, .3)) 
+
+```
+
+
+**Unique Users by Media Type Over Reference Period **
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=7}
+media_type =subset(df_final, type != "events")
+media_type<-media_type %>% distinct(type,title,sessions)
+media_type=aggregate(sessions ~ type, media_type, sum)
+ggplot(data=media_type, aes(x=reorder(type,sessions, function(x)sum(x)),y=sessions,colour=type) ) +
+	geom_bar(aes(fill = type),stat="identity",width=.4, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))+ geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 50))
+```
+
+
+\pagebreak
+
+
+**Unique Users by Subject Type Over Reference Period **
+
+Unique User Visits - Includes all forms of media including podcasts.
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=7}
+media_type =subset(df_final, type != "events")
+media_type<-media_type %>% distinct(author_categories,title,sessions)
+media_type=aggregate(sessions ~ author_categories, media_type, sum)
+ggplot(data=media_type, aes(x=reorder(author_categories,sessions, function(x)sum(x)),y=sessions,colour=author_categories) ) +
+	geom_bar(aes(fill = author_categories),stat="identity",width=.4, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))+ geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 50))
+```
+\pagebreak
+
+**Top performing content within first 45 Days of Publication**
+
+Unique User Visits - Includes 
+
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=12, fig.width=10}
+### Generate time period dates ###
+thirty_days= subset(df_final , days_aft_pub <= 45 & type != "events")
+thirty_days$days_aft_pub= ifelse(thirty_days$days_aft_pub < 0, 0, thirty_days$days_aft_pub)
+thirty_days=aggregate(sessions ~ title+author_categories, thirty_days, sum)
+thirty_days<-filter(thirty_days, row_number(-sessions) <= 20)
+
+ggplot(data=thirty_days, aes(x=reorder(title,sessions, function(x)sum(x)),y=sessions,colour=author_categories) ) +
+	ggtitle(sprintf("All Content performance within 45 Days of Publication", name))+ #,subtitle = "Unique User Views" ) +
+	geom_bar(aes(fill = author_categories),stat="identity",width=.5, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) + 
+	scale_y_continuous(expand = c(0, .35)) + geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 55))
+
+```
+
+\pagebreak
+
+**Blog unique users for content published within reference (`r (begin)` and `r (end)`)**
+
+Blog unique users within reference (`r (begin)` and `r (end)`)
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=12, fig.width=10}
+### Generate time period dates ###
+reference_per= subset(df_final , begin < pub_date & pub_date < end)
+reference_per$days_aft_pub= ifelse(reference_per$days_aft_pub < 0, 0, reference_per$days_aft_pub)
+reference_per=aggregate(sessions ~ title+author_categories, reference_per, sum)
+reference_per<-filter(reference_per, row_number(-sessions) <= 20)
+
+ggplot(data=reference_per, aes(x=reorder(title,sessions, function(x)sum(x)),y=sessions,colour=author_categories) ) +
+	geom_bar(aes(fill = author_categories),stat="identity",width=.5, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) + 
+	scale_y_continuous(expand = c(0, .35)) + geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 55))
+
+
+```
+
+
+\pagebreak
+
+**Older content performance**
+
+Unique users of content *published prior* to the reference period (between `r (begin)` and `r (end)`)
+These pieces continued to attract users despite not being published with the observed period.
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=12, fig.width=10}
+### Generate time period dates ###
+pub_prior= subset(df_final , pub_date < begin)
+pub_prior$days_aft_pub= ifelse(pub_prior$days_aft_pub < 0, 0, pub_prior$days_aft_pub)
+pub_prior=aggregate(sessions ~ title+author_categories, pub_prior, sum)
+pub_prior<-filter(pub_prior, row_number(-sessions) <= 20)
+
+ggplot(data=pub_prior, aes(x=reorder(title,sessions, function(x)sum(x)),y=sessions,colour=author_categories) ) +
+	geom_bar(aes(fill = author_categories),stat="identity",width=.5, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) + 
+	scale_y_continuous(expand = c(0, .35)) + geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 60))
+
+
+```
+
+\pagebreak
+
+This section examines time spent on reading an article relative to the number of words of text in the article.  Below are the 10 best and worst performing articles.  Multimedia (e.g. Podcasts) are ignored. This measure is designed to give you a rough idea of the types of articles people are likely to read through. 
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
+#Time per Article
+Audience_Captivation =subset(df_final, type != "events" & type != "multimedia") # Remove Events and Multimedia
+Audience_Captivation =subset(df_final, body_count > 10) # Remove Events and Multimedia
+
+Audience_Captivation <- aggregate(avg_MinPerWord ~ title+author_categories, Audience_Captivation, mean)
+Audience_Captivation =subset(Audience_Captivation, avg_MinPerWord > 0) # Remove Events and Multimedia
+
+# Happy
+Happy_audience=filter(Audience_Captivation, row_number(-avg_MinPerWord) <= 10)
+Happy_audience <- Happy_audience %>% arrange(avg_MinPerWord)
+Happy_audience$title<-factor(Happy_audience$title,levels=Happy_audience$title[order(Happy_audience$avg_MinPerWord)])
+ggplot(data=Happy_audience, aes(x=title, y=avg_MinPerWord, fill=author_categories) ) +
+	ggtitle(sprintf("10 Best Audience Attrition", name),subtitle = "Time Spent per Word in Aticle Text" ) +
+	geom_bar(stat="identity", width=0.5)+ coord_flip() + my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) 
+```
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
+# Sad Audience
+sad_audience<-filter(Audience_Captivation, row_number(avg_MinPerWord) <= 10)
+sad_audience <- sad_audience %>% arrange(avg_MinPerWord)
+
+sad_audience$title<-factor(sad_audience$title,levels=sad_audience$title[order(sad_audience$avg_MinPerWord)])
+ggplot(data=sad_audience, aes(x=title, y=avg_MinPerWord, fill=author_categories))+
+	ggtitle(sprintf("10 Worst Audience Attrition", name),subtitle="Time Spent per Word in Aticle Text")+
+	geom_bar(stat="identity", width=0.5)+ coord_flip() + my_theme()+
+	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
+
+```
+
+
+\pagebreak
+
+"Exit Rate" is the likelihood that a reader will exit out of the Cato website rather than continue reading more content.
+Multimedia content (e.g. Podcasts) has a consistently lower exit rate ascross all authors.  The likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
+
+The webstaff could increase Cato readership by adding a "Suggested Reading" banner with links to related articles.
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=9, fig.width=8.5}
+### Generate time period dates ###
+exit_rate =subset(df_final,  type != "events") # no events
+exit_rate$days_aft_pub= ifelse(exit_rate$days_aft_pub < 0, 0, exit_rate$days_aft_pub)
+exit_rate$cat_type= paste0(exit_rate$author_categories," (",exit_rate$type,")")
+exit_rate$web_recs=ifelse(exit_rate$type=="blog"|exit_rate$type=="commentary"|exit_rate$type=="policy analysis"|exit_rate$type=="tax budget bulletin", "No","Yes")
+
+exit_rate1=aggregate(exitRate ~ cat_type+web_recs, exit_rate, mean)
+exit_rate1$cat_type<-factor(exit_rate1$cat_type,levels=exit_rate1$cat_type[order(exit_rate1$exitRate)])
+bar = ggplot(data=exit_rate1, aes(x=cat_type,y=exitRate,colour=web_recs) ) +
+	ggtitle(sprintf("Average Exit Rate", name), subtitle = "" ) +
+	geom_bar(aes(fill = web_recs),stat="identity",width=.4, position = "dodge")+my_theme() + theme(legend.position = "None")+coord_flip()+
+	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))+ geom_text(aes(label=round(exitRate,2), label.size = 2), color ="#000000",vjust=0, hjust=(.1), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 80))
+bar
+
+```
+
+\pagebreak
+
+More to come on this..
+
+1. Include relative performances measure to Cato and/or department averages.
+
+2. Integrate Twitter Data. Identify effective Twitter behavior. Offer comparisons between subject of report and other Cato employees.
+
+3. Utilize email list can be associated with the Google Analytics data to demonstrate “influencer interest”. This could be done either on an individual basis (specific email addresses) or using the email domain (@tx.gov, @senate.gov, @GMU.edu, @brookings.org, etc).  
+
+3. Many other ideas....
+
+
+

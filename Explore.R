@@ -352,11 +352,15 @@ df_finalt=df_final[!(df_final$title==length(0)),]
 setDT(df_final)
 df_final <- df_final[,n:=.N,type][n>10,,][,n:=NULL]
 #unique(df_final$type)
+df_final$obs_day=as.Date(df_final$obs_day)
+
 df_final$pub_date=as.Date(df_final$pub_date)
 df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 
 df_final$collaboration_yn=ifelse(df_final$author==df_final$author_full,"Sole Author",
 						ifelse(df_final$author!=df_final$author_full|!is.na(df_final$co_authors),"Co-Authored",0))
+
+df_final$
 
 unique(df_final$co_authors)
 df_final$co_authors=gsub("^,*|(?<=,),|,*$", "", df_final$co_authors, perl=T)
