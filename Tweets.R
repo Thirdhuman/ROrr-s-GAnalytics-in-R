@@ -5,25 +5,6 @@ library(rjson)
 library(XML)
 
 
-oauth_endpoints("twitter")
-
-myapp <- oauth_app("twitter",
-			 key = "kI3TDGtYDpdN5mPWVtZg4E74L",
-			 secret = "Lk9upIVEm5BsiQq1o3KalWDWLxHL2hFnRlzwDJAkIGnSUvkr6Y")
-
-# 3. Get OAuth credentials
-twitter_token <- oauth1.0_token(oauth_endpoints("twitter"), myapp)
-
-# 4. Use API
-req <- GET("https://api.twitter.com/1.1/statuses/home_timeline.json",
-	     config(token = twitter_token))
-stop_for_status(req)
-content(req)
-
-access_token_main  =  '3705111012-0ZSGhm0Y5XDkptTYfecD8TwXoJTepfQ6fgtkUX2'
-access_token_secret_main  =  'i3EaK25UsGsHvnhJzvyLxTnVOAMusH5giu0oOKf3Y0pJY'
-consumer_key_main =  'kI3TDGtYDpdN5mPWVtZg4E74L'
-consumer_secret_main  =  'Lk9upIVEm5BsiQq1o3KalWDWLxHL2hFnRlzwDJAkIGnSUvkr6Y'
 
 # Set API Keys
 access_token   =   '3705111012-0ZSGhm0Y5XDkptTYfecD8TwXoJTepfQ6fgtkUX2'
@@ -31,21 +12,9 @@ access_token_secret  =  'i3EaK25UsGsHvnhJzvyLxTnVOAMusH5giu0oOKf3Y0pJY'
 consumer_key = 'kI3TDGtYDpdN5mPWVtZg4E74L'
 consumer_secret  = 'Lk9upIVEm5BsiQq1o3KalWDWLxHL2hFnRlzwDJAkIGnSUvkr6Y'
 
-
-## whatever name you assigned to your created app
-appname <- "rorr_bot"
-## api key (example below is not a real key)
-key <- "kI3TDGtYDpdN5mPWVtZg4E74L"
-## api secret (example below is not a real key)
-secret <- "Lk9upIVEm5BsiQq1o3KalWDWLxHL2hFnRlzwDJAkIGnSUvkr6Y"
-## create token named "twitter_token"
-twitter_token <- create_token(
-	app = appname,
-	consumer_key = key,
-	consumer_secret = secret)
-
 setup_twitter_oauth(consumer_key, consumer_secret,access_token, access_token_secret)
 
+cato_feeds = 'cato-twitter-feeds'
 twlist <- "cato-policy-scholars"
 twowner <- "CatoInstitute"
 api.url <- paste0("https://api.twitter.com/1.1/lists/members.json?slug=",
@@ -53,9 +22,17 @@ api.url <- paste0("https://api.twitter.com/1.1/lists/members.json?slug=",
 response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
 response
 
+#cato-twitter-feeds
+
 response.list <- fromJSON(content(response, as = "text", encoding = "UTF-8"))
 users.names <- sapply(response.list$users, function(i) i$name)
 users.screennames <- sapply(response.list$users, function(i) i$screen_name)
+faves <- sapply(response.list$users, function(i) i$favourites_count)
+cato_twitter=cbind(users.names,users.screennames,faves)
+
+
+
+print(json.dumps(response.list(), indent=2))
 
 
 Cato_list <- lists_users('CatoInstitute', n=5)
