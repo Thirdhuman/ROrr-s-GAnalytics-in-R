@@ -1,14 +1,6 @@
 # Google Analytics
-#Analytics
-#4/AACQY2pkmcHP-LBO1kezweGPQMmoEem6TI53Nn3bTWIcTB7SiI6TVEw
-#Auth
-#4/AABJlcxvF9CQFwt_CpXgw1gk-YOl0WzDHiwPncsbl3PgBAMciZAGen4
-
-#Intro to text analysis
-#https://www.r-bloggers.com/intro-to-text-analysis-with-r/
 
 setwd("~/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)")
-
 # Fonts
 library(extrafont)
 font_import()
@@ -23,6 +15,7 @@ library(RCurl)
 library(XML)
 library(foreach)
 library(stringr)
+
 library(ggplot2)
 #library(lubridate)
 library(data.table)
@@ -39,8 +32,8 @@ ga_id <- account_list$viewId[1]
 # Setup script
 #
 
-name="Alex Nowrasteh"
-#name="Michael D. Tanner"
+#name="Alex Nowrasteh"
+name="Michael D. Tanner"
 
 lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
 df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
@@ -51,7 +44,7 @@ last_name=str_extract(name,'[^ ]+$')
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
-from <- "2015-05-01"
+from <- "2014-07-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -110,9 +103,9 @@ get_data <- function(vid, from, to, dim, met, max) {
 																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
 df}
 gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
-save(gadata, file = "Last_Raw_GA_DAT3.RData")
+save(gadata, file = "Last_Raw_GA_DAT.RData")
 #######
-load( file = "Last_Raw_GA_DAT3.RData")
+load( file = "Last_Raw_GA_DAT.RData")
 #str(gadata)
 #######
 df1 = as.data.frame(gadata)
@@ -160,7 +153,7 @@ df1$pagePath2= gsub("www.cato-at-liberty.org", "www.cato.org/blog", df1$pagePath
 df1$pagePath2= gsub("www.cato/", "www.cato.org/", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("index.html", "", df1$pagePath2, perl=TRUE)
 df1$pagePath2= gsub(".jpllnet.sfsu.edu", "", df1$pagePath2, perl=TRUE)
-df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2) 
+df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2)
 df1$pagePath2= gsub(".ezproxy.csusm.edu", "", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2= gsub("proxy.unfake.us/proxy/350/", "www.cato.org/blog/", df1$pagePath2, perl=TRUE) # Index.html 
 df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath2)
@@ -303,15 +296,23 @@ for(k in 1:nrow(text_stats)){
 unique(text_stats$top_terms[1:50])
 
 # Michael D. Tanner Categories
-#category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism')
-#category_2=c('social', 'security', 'medicare','retirement','liabilities', 'entitlements', 'debt')
+category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism', 'charity', 'dependency', 'antipoverty', 'poor', 'credit')
+category_2=c('social', 'security' ,'retirement', 'stocks', 'bonds')
+category_3=c('healthcare', 'security', 'medicare','medicaid', 'obamacare', 'aca', 'insurance', 'health')
+category_4=c('debt', 'entitlements','deficits', 'fiscal','liabilities', 'unfunded')
+
+text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Poverty",
+							ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Social Security",
+							ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Healthcare",
+							ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Debt/Deficits","Other"))))
+
 
 #Alex Nowrasteh Categories
-category_1=c('terrorist', 'terrorism', 'muslim', 'security')
-category_2=c('murder', 'crime','murdered', 'incarceration', 'prison','criminality')
-category_3=c('assimilation', 'generation','descendants', 'generations','vote')
-category_4=c('jobs', 'employment', 'worker','economic','bracero','workers', 'employmentbased','income', 'wage')
-category_5=c('benefits', 'debt', 'welfare','entitlements','deficits', 'fiscal')
+# category_1=c('terrorist', 'terrorism', 'muslim', 'security')
+# category_2=c('murder', 'crime','murdered', 'incarceration', 'prison','criminality')
+# category_3=c('assimilation', 'generation','descendants', 'generations','vote')
+# category_4=c('jobs', 'employment', 'worker','economic','bracero','workers', 'employmentbased','income', 'wage')
+# category_5=c('benefits', 'debt', 'welfare','entitlements','deficits', 'fiscal')
 
 # Vanessa B. Calder Categories
 #category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
@@ -321,13 +322,13 @@ category_5=c('benefits', 'debt', 'welfare','entitlements','deficits', 'fiscal')
 
 ## Generate 
 unique(df_final$co_authors)
-
-text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
-																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
-																		ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
-																		ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Economy/Employment",
-																		ifelse(grepl(paste(category_5, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Fiscal/Welfare",
-																		"Other")))))
+# 
+# text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
+# 																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Crime",
+# 																		ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
+# 																		ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Economy/Employment",
+# 																		ifelse(grepl(paste(category_5, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Fiscal/Welfare",
+# 																		"Other")))))
 
 # text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
 #  				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
@@ -360,16 +361,45 @@ df_final$days_aft_pub=(df_final$obs_day-df_final$pub_date)
 df_final$collaboration_yn=ifelse(df_final$author==df_final$author_full,"Sole Author",
 						ifelse(df_final$author!=df_final$author_full|!is.na(df_final$co_authors),"Co-Authored",0))
 
-df_final$
-
 unique(df_final$co_authors)
 df_final$co_authors=gsub("^,*|(?<=,),|,*$", "", df_final$co_authors, perl=T)
 
+doc=Corpus(VectorSource(save_docs))
+doc <- tm_map(doc, removeNumbers)
+doc <- tm_map(doc, tolower)
+doc <- tm_map(doc, stripWhitespace)
+doc <- tm_map(doc, removePunctuation)
+doc <- tm_map(doc, PlainTextDocument)
+doc <- tm_map(doc, toSpace, "/")
+doc <- tm_map(doc, toSpace, "@")
+doc <- tm_map(doc, toSpace, "\\|")
+doc <- tm_map(doc, toNothing, "-")
+doc <- tm_map(doc, toNothing, "—")
+doc <- tm_map(doc, toNothing, "–")
+doc <- tm_map(doc, removeWords, stopwords("english"))
+doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one', 'NA', 'immigrants', 'will'))
+
 
 save(df_final, file = paste0(analysis_identifier,".RData"))
-save(save_docs, file = paste0("save_docs(",last_name,").RData"))
+save(doc, file = paste0("save_docs(",last_name,").RData"))
 print(paste0(analysis_identifier,".RData"))
 print(paste0("save_docs(",last_name,").RData"))
+
+# load("AlNo(0515-0518).RData")
+# save(df_final, file = 'AlNo(0515-0518).RData')
+# 
+# unique(df_final$title)
+# save(df_final, file = 'AlNo(0515-0518).RData')
+# 
+# df_final_noTerror <- df_final[ which(df_final$title!='Terrorism and Immigration: A Risk Analysis'), ]
+# save(df_final_noTerror, file = 'noTerror.RData')
+# 
+# 
+# df_final$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),df_final$top_terms,fixed=F)==T,"Terorism",
+# 										ifelse(grepl(paste(category_2, collapse = "|"),df_final$top_terms,fixed=F)==T, "Crime",
+# 										ifelse(grepl(paste(category_3, collapse = "|"),df_final$top_terms,fixed=F)==T,"Culture/Assimilation",
+# 										ifelse(grepl(paste(category_4, collapse = "|"),df_final$top_terms,fixed=F)==T, "Economy/Employment",
+# 										ifelse(grepl(paste(category_5, collapse = "|"),df_final$top_terms,fixed=F)==T, "Fiscal/Welfare","Other")))))
 
 ## Qualitative Text Analyses ##
 #custom_bigram <- content_transformer(function (x , pattern ) gsub(pattern, "paid_leave", x))

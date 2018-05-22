@@ -9,6 +9,7 @@ output:
 ```{r, include=FALSE}
 # Open Data
 load( file = "AlNo(0515-0518).RData")
+#noTerror.RData
 load( file = "save_docs(Nowrasteh).RData")
 #Load Dependencies
 library(tinytex)
@@ -316,7 +317,9 @@ bar = ggplot(data=exit_rate1, aes(x=cat_type,y=exitRate,colour=web_recs) ) +
 bar
 
 ```
-
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=9, fig.width=8.5}
+#rmarkdown::render("")
+```
 \pagebreak
 
 More to come on this..
