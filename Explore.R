@@ -19,6 +19,8 @@ library(stringr)
 library(ggplot2)
 #library(lubridate)
 library(data.table)
+library(stringdist)
+
 library(pbmcapply)
 #library(plyr)
 
@@ -35,16 +37,46 @@ ga_id <- account_list$viewId[1]
 #name="Alex Nowrasteh"
 name="Michael D. Tanner"
 
+
+scholars=read.csv('Cato_Scholars.csv')
+names(scholars)[names(scholars) == 'users.names'] ='name.twitter'
+names(scholars)[names(scholars) == 'users.IDs'] ='ID.twitter'
+names(scholars)[names(scholars) == 'users.screennames'] ='handle.twitter'
+
+
+ClosestMatch2 =  function(string, stringVector){
+  stringVector[amatch(string, stringVector, maxDist=Inf)]}
+
+website.names = list()
+for(i in seq_along(scholars$users.names)){
+	temp=scholars$users.names[i]
+	website.names[i] = ClosestMatch2(temp, df1$author_full) 
+}
+
+scholars$name.website=website.names
+scholars=as.data.frame(scholars)
+as.data.frame()
+df1$author_full
+
+
+website.names
+
+ClosestMatch2(name, scholars$users.names)
+
+
 lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
 df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
 
 name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
 
+unique(df1$author_full)
+
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
 # date range
-from <- "2014-07-01"
+#from <- "2014-06-30"
+from <- "2018-01-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -70,9 +102,10 @@ initials <- function(a, b){
 }
 analysis_identifier=initials(name,analysis_range)
 
+name=''
 
 ## Specify Search terms
-max = 5000000
+max = 4000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',

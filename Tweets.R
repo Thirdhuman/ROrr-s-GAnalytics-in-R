@@ -7,6 +7,8 @@ library(httr)
 library(XML)
 library(anytime)
 library(syuzhet)
+ClosestMatch2 =  function(string, stringVector){
+  stringVector[amatch(string, stringVector, maxDist=Inf)]}
 
 #library(reticulate)
 #os <- import("os")
@@ -37,6 +39,21 @@ followers <- sapply(response.list$users, function(i) i$followers_count)
 date_created <- sapply(response.list$users, function(i) i$created_at)
 
 cato_twitter=cbind(users.names,date_created,users.screennames,users.IDs,faves,followers)
+scholars=cato_twitter
+names(scholars)[names(scholars) == 'users.names'] ='name.twitter'
+names(scholars)[names(scholars) == 'users.IDs'] ='ID.twitter'
+names(scholars)[names(scholars) == 'users.screennames'] ='handle.twitter'
+write.csv(cato_twitter, "Cato_Scholars.csv")
+
+website.names=list()
+for(i in seq_along(scholars$users.names)){
+	temp=scholars$users.names[i]
+	website.names[i] = ClosestMatch2(temp, df1$author_full) 
+}
+
+scholars$name.website=website.names
+scholars=as.data.frame(scholars)
+
 
 tweets.dataframe = data.frame()
 tweet_df = data.frame()
@@ -44,7 +61,7 @@ query <- unlist(strsplit(users.screennames,","))
 query=as.data.frame(query)
 
 output=apply( query, 1,function(i){
-	tweets <- userTimeline(i, n = 100)
+	tweets <- userTimeline(i, n = 3200)
 	df=do.call("rbind", lapply(tweets, as.data.frame))})
 
 # Loop through the twitter handles & store the results as individual dataframes
@@ -59,14 +76,64 @@ for(i in 1:length(output)){
 					date=(output[[i]]$created[j])
 					retweets=output[[i]]$retweetCount[j]
 					faves=output[[i]]$favoriteCount[j]
-					tweet_info=cbind(author, date, tweet, faves, retweets)
-					tweets.dataframe=rbind(tweets.dataframe, tweet_info)}
-					#tweets.dataframe$date=as.Date(as.POSIXct(tweets.dataframe$date))
-					}
+					reply=output[[i]]$replyToSN[j]
+					tweet_info=cbind(author, date, tweet, faves, retweets, reply)
+					tweets.dataframe=rbind(tweets.dataframe, tweet_info)}}
+					
+# Format Data
 tweets.dataframe=sapply(tweets.dataframe, as.character)
 tweets.dataframe = as.data.frame( tweets.dataframe )
+tweets.dataframe$date = as.character( tweets.dataframe$date )
+tweets.dataframe$date = as.numeric( tweets.dataframe$date )
+tweets.dataframe$date=sapply(tweets.dataframe$date,function(i) format(anydate(i)))
+i <- sapply(tweets.dataframe, is.factor) 
+tweets.dataframe[i] <- lapply(tweets.dataframe[i], as.character)
+tweets.dataframe = as.data.frame( tweets.dataframe )
 
-tweets.dataframe$date=format(anytime(tweets.dataframe$date), tz = "America/New_York", usetz=TRUE) 
+# Conversation ?
+tweets.dataframe$conversation=ifelse(tweets.dataframe$reply==tweets.dataframe$author | is.na(tweets.dataframe$reply), "No", "Yes")
+tweets.dataframe$tweet_v <- get_sentences(tweets.dataframe$tweet)
+
+tweets.dataframe$tweet=gsub(' http[^[:blank:]]+', '',  tweets.dataframe$tweet)
+tweets.dataframe$tweet=gsub('(\\.|!|\\?)\\s+|(\\++)', ' ', tweets.dataframe$tweet)
+# Polarity
+tweets.dataframe$syuzhet <- get_sentiment(tweets.dataframe$tweet, method="syuzhet")
+
+tweets.dataframe$emotions <- get_nrc_sentiment(tweets.dataframe$tweet)
+
+
+min(tweets.dataframe$syuzhet)
+library(ggplot2)
+test=aggregate(syuzhet ~ author, data= tweets.dataframe, mean)
+test$author<-factor(test$author,levels=test$author[order(test$syuzhet)])
+
+test = merge(test, cato_twitter, by.x = 'author', by.y = 'users.screennames' )
+test$users.names<-factor(test$users.names,levels=test$users.names[order(test$syuzhet)])
+
+ggplot(data=test, aes(x=users.names,y=syuzhet,colour=users.names) ) +
+		geom_bar(aes(fill = users.names),stat="identity",width=.4, position = "dodge") + theme(legend.position="none") + coord_flip()
+		
+bar +theme(legend.title=element_blank()) + coord_flip()
+
+str(tweets.dataframe)
+
+txt=tweets.dataframe$tweet[i]
+
+pol = 	lapply(tweets.dataframe$tweet, function(i) {txt=tweets.dataframe$tweet[i]
+	# strip sentence enders so each tweet is analyzed as a sentence,
+	# and +'s which muck up regex
+	txt=gsub('(\\.|!|\\?)\\s+|(\\++)', ' ', txt)
+		# strip URLs
+		txt=gsub(' http[^[:blank:]]+', '', txt)
+		# calculate polarity
+		syuzhet_vector <- get_sentiment(txt, method="syuzhet")})
+
+unique(pol)
+
+tweets.dataframe$emotionalValence = sapply(pol, function(x) x$all$polarity)
+
+
+format(anydate(tweets.dataframe$date), tz = "America/New_York", usetz=F) 
 tweets.dataframe$date=as.Date(tweets.dataframe$date)
 
 
@@ -84,23 +151,12 @@ str(test)
 
 
 test=as.POSIXct(test)
-format(anytime(1526935968), tz = "America/New_York", usetz=TRUE) #converting from UTC to EST timezone.
 	# tweets.dataframe$date=as.character(tweets.dataframe$date)
 	# tweets.dataframe$date=as.Date(tweets.dataframe$date, format = "%m/%d/%Y")
 	# if(length(tweet_df) >0) {tweets.dataframe <- rbind(tweets.dataframe, (tweet_df))}}
 
 
 
-pol = 	lapply(tweets.dataframe$text, function(txt) {
-	# strip sentence enders so each tweet is analyzed as a sentence,
-	# and +'s which muck up regex
-	gsub('(\\.|!|\\?)\\s+|(\\++)', ' ', txt) %>%
-		# strip URLs
-		gsub(' http[^[:blank:]]+', '', .) %>%
-		# calculate polarity
-		polarity()
-})
-tweets.dataframe$emotionalValence = sapply(pol, function(x) x$all$polarity)
 
 
 # tweets.dataframe is now a list where each element is a date frame containing

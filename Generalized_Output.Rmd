@@ -3,25 +3,8 @@ title: |
   | \vspace{4cm} \LARGE{"Work In Progress - Web Content Report"}
 date: "`r Sys.Date()`"
 author: Robert Orr
-output: 
-pdf_document: 
-    default
+output: pdf_document
 ---
-```{r include=FALSE, message=FALSE, warning = FALSE}
-# getwd()
-# setwd('/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)')
-library(rmarkdown)
-library(knitr)
-library(tinytex)
-rmarkdown::render(input = "/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)Generalized_Output.Rmd", pdf_document(output_file = "string.pdf")
-																		)
-
-# 
-# knit("Generalized_Output.Rmd")
-# markdownToHTML('Generalized_Output.md', paste0(analysis_identifier,'.html'), options=c("use_xhml"))
-# system(paste0("pandoc -s ",analysis_identifier,'.html -o ',analysis_identifier,".pdf"))
-#rmarkdown::render("Generalized_Output.Rmd", run_pandoc=T, encoding = getOption("encoding"), output_file = paste0(analysis_identifier,'.pdf'))
-```
 
 
 ```{r, include=FALSE}
@@ -98,7 +81,6 @@ analysis_identifier=initials(name,analysis_range)
 
 ```{r echo=FALSE, fig.align="center"}
 # creating of document matrix
-
 library(tm)
 library(wordcloud)
 library(topicmodels)
@@ -129,20 +111,36 @@ Colored by topic between the dates `r (begin)` and `r (end)`.
 ```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=8}
 total_line =subset(df_final, type != "events"&type !="multimedia") # Remove events
 total_line=aggregate(sessions ~ title + author_categories + obs_day, total_line, sum)
-total_line$big_day <- ifelse(total_line$sessions > 2000, paste0(total_line$title,"(",as.character(total_line$obs_day),")"), "")
+total_line$big_day = paste0(total_line$title,"(",as.character(total_line$obs_day),")")
 
 title_big=aggregate(sessions~title+obs_day+big_day, total_line,function(x) x[which.max(abs(x))])
-title_big$label_point = T
+title_big$rank_unique = rank(-title_big$sessions)
 total_line=merge(total_line,title_big, all.x=T)
 
-line=total_line %>%
-ggplot(aes(x=obs_day,y=sessions,group=author_categories,colour=author_categories))+geom_line()+
+title_numb=aggregate(sessions~title, total_line,function(x) x[which.max(abs(x))])
+title_numb$rank_overall = rank(-title_numb$sessions)
+total_line=merge(total_line,title_numb, all.x=T)
+
+total_line$rank_unique = ifelse(total_line$rank_unique > 20, NA, total_line$rank_unique)
+total_line$rank_overall = ifelse(total_line$rank_overall > 20, NA, total_line$rank_overall)
+
+top_days=total_line %>%ggplot(aes(x=obs_day,y=sessions,group=author_categories,colour=author_categories))+geom_line()+
 	theme(axis.text.x=element_text(angle=90,hjust = 1),legend.position="none")+my_theme()+
 	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())+
 	scale_y_continuous(expand = c(0, .3))
 library(ggrepel)
-line + geom_label_repel(data = subset(total_line %>% group_by(title) %>% top_n(n=1, sessions))
-												    ,	aes(label=big_day), size=3.5)+ theme(legend.position = "None")   # label
+top_days + geom_label_repel(data = subset(total_line %>% group_by(title) %>% top_n(n=1, sessions))
+												    ,	aes(label=rank_unique), size=8)+ theme(legend.position = "None")   # label
+```
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=8}
+library(knitr)
+library(kableExtra)
+
+total_table = subset(total_line, rank_unique < 21#, select=c(ID, Weight)
+																					)
+total_table %>% kable() %>%  kable_styling()
+
 ```
 
 \pagebreak
@@ -330,7 +328,8 @@ ggplot(data=sad_audience, aes(x=title, y=avg_MinPerWord, fill=author_categories)
 
 \pagebreak
 
-"Exit Rate" is the likelihood that a reader will exit out of the Cato website rather than continue reading more content.
+"Exit Rate" is the likelihood that a reader will exit out of the Cato website rather than continue reading more content.   A lower exit rate is superior from a content dissemenation maximization standpoint.
+
 Multimedia content (e.g. Podcasts) has a consistently lower exit rate ascross all authors.  The likely explanation for why this is the case has to with the fact that links to other Cato web-content are prominently displayed for media.  This insight strongly suggests that links to related content ought to be similarly placed in other forms content (blogs, commentary, policy analyses, etc.)
 
 The webstaff could increase Cato readership by adding a "Suggested Reading" banner with links to related articles.
