@@ -26,7 +26,7 @@ twlist= "cato-policy-scholars"
 twowner= "CatoInstitute"
 api.url= paste0("https://api.twitter.com/1.1/lists/members.json?slug=",twlist,"&owner_screen_name=",twowner,"&count=5000")
 response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
-response
+load( file = "NAME_SAMPLE.RData")
 
 #cato-twitter-feeds
 
@@ -37,22 +37,22 @@ users.IDs <- sapply(response.list$users, function(i) i$id_str)
 faves <- sapply(response.list$users, function(i) i$favourites_count)
 followers <- sapply(response.list$users, function(i) i$followers_count)
 date_created <- sapply(response.list$users, function(i) i$created_at)
-
 cato_twitter=cbind(users.names,date_created,users.screennames,users.IDs,faves,followers)
-scholars=cato_twitter
+scholars=as.data.frame(cato_twitter)
 names(scholars)[names(scholars) == 'users.names'] ='name.twitter'
 names(scholars)[names(scholars) == 'users.IDs'] ='ID.twitter'
 names(scholars)[names(scholars) == 'users.screennames'] ='handle.twitter'
-write.csv(cato_twitter, "Cato_Scholars.csv")
-
-website.names=list()
-for(i in seq_along(scholars$users.names)){
-	temp=scholars$users.names[i]
-	website.names[i] = ClosestMatch2(temp, df1$author_full) 
-}
-
+website.names = list()
+for(i in seq_along(scholars$name.twitter)){
+	temp=scholars$name.twitter[i]
+	website.names[i] = ClosestMatch2(temp, name_sample$author_full) }
 scholars$name.website=website.names
 scholars=as.data.frame(scholars)
+i <- sapply(scholars, is.factor)
+scholars[i] <- lapply(scholars[i], as.character)
+scholars$name.website=unlist(scholars$name.website)
+str(scholars)
+write.csv(scholars, "Cato_Scholars.csv")
 
 
 tweets.dataframe = data.frame()

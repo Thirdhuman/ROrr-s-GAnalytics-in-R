@@ -15,14 +15,18 @@ library(RCurl)
 library(XML)
 library(foreach)
 library(stringr)
-
 library(ggplot2)
-#library(lubridate)
 library(data.table)
 library(stringdist)
-
 library(pbmcapply)
 #library(plyr)
+## Define Functions ##
+lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
+df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
+
+###################################################################################### 
+###################################### Begin script ################################## 
+###################################################################################### 
 
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
@@ -30,53 +34,20 @@ current_date=as.Date(current_date)
 # Open Google Analytics
 account_list <- ga_account_list()
 ga_id <- account_list$viewId[1]
-#
-# Setup script
-#
+cato_scholars=read.csv('Cato_Scholars.csv')
 
-#name="Alex Nowrasteh"
-name="Michael D. Tanner"
-
-
-scholars=read.csv('Cato_Scholars.csv')
-names(scholars)[names(scholars) == 'users.names'] ='name.twitter'
-names(scholars)[names(scholars) == 'users.IDs'] ='ID.twitter'
-names(scholars)[names(scholars) == 'users.screennames'] ='handle.twitter'
-
-
-ClosestMatch2 =  function(string, stringVector){
-  stringVector[amatch(string, stringVector, maxDist=Inf)]}
-
-website.names = list()
-for(i in seq_along(scholars$users.names)){
-	temp=scholars$users.names[i]
-	website.names[i] = ClosestMatch2(temp, df1$author_full) 
-}
-
-scholars$name.website=website.names
-scholars=as.data.frame(scholars)
-as.data.frame()
-df1$author_full
-
-
-website.names
-
-ClosestMatch2(name, scholars$users.names)
-
-
-lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
-df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
-
+# Choose person(s) of interest
+targets = cato_scholars %>% filter(str_detect(name.website, 'Nowrasteh'))
+name=targets$name.website
 name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
 
-unique(df1$author_full)
-
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
-# date range
+
+# Establish date range
 #from <- "2014-06-30"
-from <- "2018-01-01"
+from <- "2018-04-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -84,7 +55,7 @@ dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
 fc2 <- filter_clause_ga4(list(dimf #,dimf2
 																														), operator = "OR")
 
-# Build file name
+#### Construct File Name ####
 from_s = (from)
 from_m = as.character(from)
 from_y=str_sub(from, start=3, end = 4)
@@ -96,16 +67,12 @@ initials <- function(a, b){
 	a <- str_split(a, "&")
 	a1 <- lapply(a, function(x){
 		x1 <- str_split(str_trim(x), " ")
-		paste0(unlist(lapply(x1, str_sub, 1, 2)), collapse="")
-	})
-	paste0(unlist(a1), b) 
-}
+		paste0(unlist(lapply(x1, str_sub, 1, 2)), collapse="")	})
+	paste0(unlist(a1), b) }
 analysis_identifier=initials(name,analysis_range)
 
-name=''
-
-## Specify Search terms
-max = 4000
+#### Specify Search terms ####
+max = 50000000
 met = c("sessions",
 								#"pageviews",
 								'timeOnPage','avgTimeOnPage',
@@ -115,14 +82,13 @@ dim = c("date",
 								#'ga:dimension2', 
 								#'region',
 								#'city', 
-								'pagePath'
-								)
-# the function
+								'pagePath')
+
+#### Launch Google Analytic Retrieval Function ####
 df2 = data.frame()
-get_data <- function(vid, from, to, dim, met, max) {
-  df <- google_analytics(viewId = vid, date_range = c(from, to), metrics = met,  dimensions = dim,
-              #met_filters = fc, 
-               dim_filters = fc2,  max = max	,anti_sample = TRUE)
+get_data=function(vid,from,to,dim,met,max){df=google_analytics(
+			viewId=vid,date_range=c(from,to),metrics=met,dimensions=dim, #met_filters = fc, 
+ 		dim_filters = fc2,  max = max	,anti_sample = TRUE)
 # clean up and set class
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
 		df$author_full=df$dimension1
@@ -135,14 +101,15 @@ get_data <- function(vid, from, to, dim, met, max) {
 		df$collaboration_yn=ifelse(df$author==df$author_full,"Sole Author",
 																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
 df}
-gadata <- get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
+gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 save(gadata, file = "Last_Raw_GA_DAT.RData")
 #######
 load( file = "Last_Raw_GA_DAT.RData")
-#str(gadata)
 #######
 df1 = as.data.frame(gadata)
 rm(gadata)
+
+#### Initialize Cleanup of Google Analytics Data ####
 df1$obs_day=as.Date(df1$date)
 df1$date<-NULL
 # 
