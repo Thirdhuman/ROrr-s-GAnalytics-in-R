@@ -27,7 +27,6 @@ twowner= "CatoInstitute"
 api.url= paste0("https://api.twitter.com/1.1/lists/members.json?slug=",twlist,"&owner_screen_name=",twowner,"&count=5000")
 response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
 load( file = "NAME_SAMPLE.RData")
-
 #cato-twitter-feeds
 
 response.list <- fromJSON(content(response, as = "text", encoding = "UTF-8"))

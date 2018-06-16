@@ -1,11 +1,9 @@
 # Google Analytics
-
 setwd("~/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)")
 # Fonts
 library(extrafont)
 font_import()
 loadfonts()
-
 getwd()
 # My Packages
 library(googleAnalyticsR)
@@ -20,13 +18,14 @@ library(data.table)
 library(stringdist)
 library(pbmcapply)
 #library(plyr)
+
 ## Define Functions ##
 lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
 df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
 
-###################################################################################### 
-###################################### Begin script ################################## 
-###################################################################################### 
+########################################################################################## 
+###################################### Begin script ###################################### 
+########################################################################################## 
 
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
@@ -46,8 +45,8 @@ last_name=str_extract(name,'[^ ]+$')
 vid <- "3016983"
 
 # Establish date range
-#from <- "2014-06-30"
-from <- "2018-04-01"
+from <- "2014-06-30"
+#from <- "2018-04-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -73,12 +72,11 @@ analysis_identifier=initials(name,analysis_range)
 
 #### Specify Search terms ####
 max = 50000000
-met = c("sessions",
-								#"pageviews",
+met = c("sessions", #"pageviews",
 								'timeOnPage','avgTimeOnPage',
 								"entrances","bounces", 'exitRate')
 dim = c("date", 
-								"ga:dimension1", 
+								"ga:dimension1", 'channelGrouping', 'referralPath', 'city', 'region',
 								#'ga:dimension2', 
 								#'region',
 								#'city', 
@@ -109,10 +107,12 @@ load( file = "Last_Raw_GA_DAT.RData")
 df1 = as.data.frame(gadata)
 rm(gadata)
 
+#####################################################
 #### Initialize Cleanup of Google Analytics Data ####
+#####################################################
 df1$obs_day=as.Date(df1$date)
 df1$date<-NULL
-# 
+#  Remove Popular Proxy Strings
 df1 <- df1[!grepl("search/srpcache", df1$pagePath),]
 df1 <- df1[!grepl("www.filterbypass.me", df1$pagePath),]
 df1 <- df1[!grepl("wikipedia.org/secure", df1$pagePath),]
@@ -133,7 +133,7 @@ df1 <- df1[!grepl("ow.ly", df1$pagePath),]
 df1 <- df1[!grepl("searchenginereports.net", df1$pagePath),]
 df1 <- df1[!grepl("xitenow", df1$pagePath),]
 df1 <- df1[!grepl("cato.us1.list-manage.com/track/click", df1$pagePath),]
-
+# More Reshaping of Page Paths & Remove Trailing Strings #
 df1$pagePath2= gsub(".*www.cato.org", "www.cato.org", df1$pagePath)
 df1$pagePath2= gsub(pattern="[?].*","",x=df1$pagePath2)
 df1$pagePath2= gsub(pattern=".*https://*|&.*","",x=df1$pagePath2)
@@ -168,7 +168,6 @@ df_final= data.frame()
 web_df= data.frame()
 df1$ID <- seq.int(nrow(df1))
 url_vector=df1[["pagePath"]]
-
 
 SafeGet = function (x)	{
 	tryCatch({
@@ -513,8 +512,6 @@ page %>%
 	geom_line()  + 
 	theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
 
-qualitative=
-'http://feedproxy.google.com/~r/RBloggers/~3/2SuUZ6tx5ho/?utm_source=feedburner&utm_medium=email'
 
 ### group mtcars by cylinders and return some averages
 cars <- df1 %>%
