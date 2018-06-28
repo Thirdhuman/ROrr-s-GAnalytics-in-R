@@ -11,9 +11,9 @@ output: pdf_document
 # Open Data
 setwd('/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)')
 
-load( file = "MiD.Ta(0515-0518).RData")
+load( file = "VaBrCa(0614-0618).RData")
 #noTerror.RData
-load( file = "save_docs(Tanner).RData")
+load( file = "save_docs(Calder).RData")
 #Load Dependencies
 library(tinytex)
 library(wordcloud)
@@ -76,6 +76,7 @@ initials <- function(a, b){
 }
 analysis_identifier=initials(name,analysis_range)
 
+
 ```
 
 
@@ -108,7 +109,7 @@ This is `r (name)`'s web analytics report from between the dates `r (begin)` and
 
 Colored by topic between the dates `r (begin)` and `r (end)`.
 
-```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=8}
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=6, fig.width=8}
 total_line =subset(df_final, type != "events"&type !="multimedia") # Remove events
 total_line=aggregate(sessions ~ title + author_categories + obs_day, total_line, sum)
 total_line$big_day = paste0(total_line$title,"(",as.character(total_line$obs_day),")")
@@ -133,11 +134,11 @@ top_days + geom_label_repel(data = subset(total_line %>% group_by(title) %>% top
 												    ,	aes(label=rank_unique), size=8)+ theme(legend.position = "None")   # label
 ```
 
-```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=8}
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=7, fig.width=6}
 library(knitr)
 library(kableExtra)
 
-total_table = subset(total_line, rank_unique < 21#, select=c(ID, Weight)
+total_table = subset(total_line, rank_unique < 16, select=-c(sessions, big_day, rank_unique)
 																					)
 total_table %>% kable() %>%  kable_styling()
 
@@ -272,21 +273,22 @@ ggplot(data=reference_per, aes(x=reorder(title,sessions, function(x)sum(x)),y=se
 Unique users of content *published prior* to the reference period (between `r (begin)` and `r (end)`)
 These pieces continued to attract users despite not being published with the observed period.
 
+*Note This will be blank if author joined Cato after reference period began*
 ```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=12, fig.width=10}
 ### Generate time period dates ###
-
-pub_prior= subset(df_final , is.na(pub_date)==F)
-
-pub_prior= subset(pub_prior, pub_date < (min(obs_day)-days(30)))
-pub_prior$days_aft_pub= ifelse(pub_prior$days_aft_pub < 0, 0, pub_prior$days_aft_pub)
-pub_prior=aggregate(sessions ~ title+author_categories, pub_prior, sum)
-pub_prior<-filter(pub_prior, row_number(-sessions) <= 20)
-
-ggplot(data=pub_prior, aes(x=reorder(title,sessions, function(x)sum(x)),y=sessions,colour=author_categories) ) +
-	geom_bar(aes(fill = author_categories),stat="identity",width=.5, position = "dodge")+coord_flip()+my_theme()+ 
-	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) + 
-	scale_y_continuous(expand = c(0, .35)) + geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 40))
-
+# 
+# pub_prior= subset(df_final , is.na(pub_date)==F)
+# 
+# pub_prior= subset(pub_prior, pub_date < (min(obs_day)-days(30)))
+# pub_prior$days_aft_pub= ifelse(pub_prior$days_aft_pub < 0, 0, pub_prior$days_aft_pub)
+# pub_prior=aggregate(sessions ~ title+author_categories, pub_prior, sum)
+# pub_prior<-filter(pub_prior, row_number(-sessions) <= 20)
+# 
+# ggplot(data=pub_prior, aes(x=reorder(title,sessions, function(x)sum(x)),y=sessions,colour=author_categories) ) +
+# 	geom_bar(aes(fill = author_categories),stat="identity",width=.5, position = "dodge")+coord_flip()+my_theme()+ 
+# 	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) + 
+# 	scale_y_continuous(expand = c(0, .35)) + geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 40))
+# 
 
 ```
 

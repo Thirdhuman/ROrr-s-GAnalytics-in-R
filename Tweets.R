@@ -50,6 +50,17 @@ scholars=as.data.frame(scholars)
 i <- sapply(scholars, is.factor)
 scholars[i] <- lapply(scholars[i], as.character)
 scholars$name.website=unlist(scholars$name.website)
+scholars$title_category_1 = NA
+scholars$category_1 = NA
+scholars$title_category_2 = NA
+scholars$category_2 = NA
+scholarstitle_category_3 = NA
+scholars$category_3 = NA
+scholars$title_category_4 = NA
+scholars$category_4 = NA
+scholars$title_category_5 = NA
+scholars$category_5 = NA
+
 str(scholars)
 write.csv(scholars, "Cato_Scholars.csv")
 

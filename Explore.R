@@ -17,11 +17,10 @@ library(ggplot2)
 library(data.table)
 library(stringdist)
 library(pbmcapply)
+
 #library(plyr)
 
 ## Define Functions ##
-lst <- sapply(stri_extract_all_words(name), function(x) substr(x, 0, 2))
-df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
 
 ########################################################################################## 
 ###################################### Begin script ###################################### 
@@ -36,7 +35,7 @@ ga_id <- account_list$viewId[1]
 cato_scholars=read.csv('Cato_Scholars.csv')
 
 # Choose person(s) of interest
-targets = cato_scholars %>% filter(str_detect(name.website, 'Nowrasteh'))
+targets = cato_scholars %>% filter(str_detect(name.website, 'Vanessa'))
 name=targets$name.website
 name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
@@ -76,11 +75,11 @@ met = c("sessions", #"pageviews",
 								'timeOnPage','avgTimeOnPage',
 								"entrances","bounces", 'exitRate')
 dim = c("date", 
-								"ga:dimension1", 'channelGrouping', 'referralPath', 'city', 'region',
+								"ga:dimension1", 'channelGrouping',# 'city', 'region',
 								#'ga:dimension2', 
-								#'region',
-								#'city', 
 								'pagePath')
+
+lst <- sapply(str_extract_all(name), function(x) substr(x, 0, 2))
 
 #### Launch Google Analytic Retrieval Function ####
 df2 = data.frame()
@@ -98,6 +97,7 @@ get_data=function(vid,from,to,dim,met,max){df=google_analytics(
 		df$co_authors=trimws(df$co_authors)
 		df$collaboration_yn=ifelse(df$author==df$author_full,"Sole Author",
 																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
+df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
 df}
 gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
 save(gadata, file = "Last_Raw_GA_DAT.RData")
@@ -164,10 +164,15 @@ df1$pagePath1=df1$pagePath
 df1$pagePath=df1$pagePath2
 df1$pagePath2=NULL
 
+#####################################################
+################ Scrape Cato Web Data ############### 
+#####################################################
+
 df_final= data.frame()
 web_df= data.frame()
 df1$ID <- seq.int(nrow(df1))
-url_vector=df1[["pagePath"]]
+url_vector_full=df1[["pagePath"]]
+url_vector=unique(url_vector_full)
 
 SafeGet = function (x)	{
 	tryCatch({
@@ -179,13 +184,18 @@ SafeGet = function (x)	{
 	return(title)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
-responses <- pbmclapply(url_vector, SafeGet, mc.preschedule=T)
-title=trimws(responses)
+website_responses <- pbmclapply(url_vector, SafeGet, mc.preschedule=T)
+title=trimws(website_responses)
+link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+link_df_full=as.data.frame(cbind(pagePath=url_vector_full))
+linked_title= merge(link_df_full, link_df, by=('pagePath'), all.x=T)
+
 save(title, file = "Title_Vector.RData")
 #######
 load( file = "Title_Vector.RData")
-web_df=data.frame(cbind(title=title))
-df_intermediate = cbind(df1, web_df)
+
+linked_title=unique(linked_title)
+df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
 # 
 # nrow(test)
@@ -206,7 +216,6 @@ df_intermediate = cbind(df1, web_df)
 # 	doc = htmlParse(filename)
 # 	plain_text = xpathSApply(doc, "//h1[@class='page-h1'][1]", xmlValue)})
 # web_df=data.frame(cbind(title=title))
-# df_intermediate <- cbind(df1, web_df)
 
 type_list <- pbmclapply(url_vector, function(url){
 																type = gsub('www.cato.org*/|/.*', "\\1", url)
@@ -216,7 +225,14 @@ type_list <- pbmclapply(url_vector, function(url){
 																type=ifelse((type=="publications"), type_2, type)
 })
 type_df=data.frame(cbind(type=type_list))
-df_intermediate <- cbind(df_intermediate, type_df)
+type_df=as.data.frame(cbind(type=type_list, pagePath=url_vector))
+type_df_full=as.data.frame(cbind(pagePath=url_vector_full))
+linked_type= merge(type_df_full, type_df, by=('pagePath'), all.x=T)
+linked_type=unique(linked_type)
+
+df_intermediate <- merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+
+#df_intermediate <- cbind(df_intermediate, type_df)
 
 # Extract web content from Cato Website
 df3= data.frame()
@@ -295,15 +311,10 @@ for(k in 1:nrow(text_stats)){
 unique(text_stats$top_terms[1:50])
 
 # Michael D. Tanner Categories
-category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism', 'charity', 'dependency', 'antipoverty', 'poor', 'credit')
-category_2=c('social', 'security' ,'retirement', 'stocks', 'bonds')
-category_3=c('healthcare', 'security', 'medicare','medicaid', 'obamacare', 'aca', 'insurance', 'health')
-category_4=c('debt', 'entitlements','deficits', 'fiscal','liabilities', 'unfunded')
-
-text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Poverty",
-							ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Social Security",
-							ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Healthcare",
-							ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Debt/Deficits","Other"))))
+# category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism', 'charity', 'dependency', 'antipoverty', 'poor', 'credit')
+# category_2=c('social', 'security' ,'retirement', 'stocks', 'bonds')
+# category_3=c('healthcare', 'security', 'medicare','medicaid', 'obamacare', 'aca', 'insurance', 'health')
+# category_4=c('debt', 'entitlements','deficits', 'fiscal','liabilities', 'unfunded')
 
 
 #Alex Nowrasteh Categories
@@ -314,10 +325,10 @@ text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text
 # category_5=c('benefits', 'debt', 'welfare','entitlements','deficits', 'fiscal')
 
 # Vanessa B. Calder Categories
-#category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
-#category_2=c('women', 'family', 'leave','gender','gap')
-#category_3=c('women', 'family', 'leave','gender','gap')
-#category_4=c('women', 'family', 'leave','gender','gap')
+category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
+category_2=c('women', 'family', 'leave','gender','gap')
+category_3=c('women', 'family', 'leave','gender','gap')
+category_4=c('women', 'family', 'leave','gender','gap')
 
 ## Generate 
 unique(df_final$co_authors)
@@ -329,8 +340,13 @@ unique(df_final$co_authors)
 # 																		ifelse(grepl(paste(category_5, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Fiscal/Welfare",
 # 																		"Other")))))
 
-# text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$title,fixed=F)==T,"Women's Issues"
-#  				,ifelse(grepl(paste(category_1, collapse = "|"),text_stats$title,fixed=F)==T,"Housing",text_stats$author_categories))
+text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues",ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
+ 																		"Other"))
+
+names(df_intermediate)
+names(text_stats)
+
+all(df_intermediate1==df_intermediate2) 
 
 df_final=merge(df_intermediate, text_stats)
 
