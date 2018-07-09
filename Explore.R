@@ -17,6 +17,7 @@ library(ggplot2)
 library(data.table)
 library(stringdist)
 library(pbmcapply)
+library(openxlsx)
 
 #library(plyr)
 
@@ -32,7 +33,7 @@ current_date=as.Date(current_date)
 # Open Google Analytics
 account_list <- ga_account_list()
 ga_id <- account_list$viewId[1]
-cato_scholars=read.csv('Cato_Scholars.csv')
+cato_scholars=read.xlsx('Cato_Scholars.xlsx')
 
 # Choose person(s) of interest
 targets = cato_scholars %>% filter(str_detect(name.website, 'Vanessa'))
@@ -45,7 +46,7 @@ vid <- "3016983"
 
 # Establish date range
 from <- "2014-06-30"
-#from <- "2018-04-01"
+from <- "2018-06-01"
 to   <- as.character(current_date)
 ## create filters on dimensions
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -197,26 +198,6 @@ load( file = "Title_Vector.RData")
 linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
-# 
-# nrow(test)
-# for(value in seq_along(responses)){
-# 	tryCatch({
-# 		url_mine=test[value]
-# 		html<-getURL(url_mine,followlocation=TRUE)
-# 		parsed=htmlParse(html)
-# 		root=xmlRoot(parsed)
-# 		title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
-# 		#print("________________________")
-# 		#print(url_mine)
-# 		#print(title)
-# 	}, error=function(e){cat("ERROR :",conditionMessage(e), "\n", url_mine, "\n")})
-# }
-# 
-# title = pbmclapply(responses, function (filename) {
-# 	doc = htmlParse(filename)
-# 	plain_text = xpathSApply(doc, "//h1[@class='page-h1'][1]", xmlValue)})
-# web_df=data.frame(cbind(title=title))
-
 type_list <- pbmclapply(url_vector, function(url){
 																type = gsub('www.cato.org*/|/.*', "\\1", url)
 																type = gsub('-', " ", type)
@@ -231,8 +212,6 @@ linked_type= merge(type_df_full, type_df, by=('pagePath'), all.x=T)
 linked_type=unique(linked_type)
 
 df_intermediate <- merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
-
-#df_intermediate <- cbind(df_intermediate, type_df)
 
 # Extract web content from Cato Website
 df3= data.frame()
@@ -327,12 +306,59 @@ unique(text_stats$top_terms[1:50])
 # Vanessa B. Calder Categories
 category_1=c('housing', 'carson', 'zoning', 'hud','landuse','lihtc','homeownership','mortgage','building')
 category_2=c('women', 'family', 'leave','gender','gap')
-category_3=c('women', 'family', 'leave','gender','gap')
-category_4=c('women', 'family', 'leave','gender','gap')
+category_3=c(NA)
+category_4=c(NA)
+category_5=c(NA)
+
+title_category_1=c("Women's Issues")
+title_category_2=c("Housing")
+title_category_3=c(NA)
+title_category_4=c(NA)
+title_category_5=c(NA)
+
 
 ## Generate 
 unique(df_final$co_authors)
-# 
+
+cato_scholars$category_1=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$category_1),list(category_1),cato_scholars$category_1)
+cato_scholars$category_2=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$category_2),list(category_2),cato_scholars$category_2)
+cato_scholars$category_3=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$category_3),list(category_3),cato_scholars$category_3)
+cato_scholars$category_4=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$category_4),list(category_4),cato_scholars$category_4)
+cato_scholars$category_5=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$category_5),list(category_5),cato_scholars$category_5)
+
+cato_scholars$title_category_1=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_1),list(title_category_1),cato_scholars$title_category_1)
+cato_scholars$title_category_2=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_2),list(title_category_2),cato_scholars$title_category_2)
+cato_scholars$title_category_3=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_3),list(title_category_3),cato_scholars$title_category_3)
+cato_scholars$title_category_4=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_4),list(title_category_4),cato_scholars$title_category_4)
+cato_scholars$title_category_5=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_5),list(title_category_5),cato_scholars$title_category_5)
+
+
+	#  cato_scholars$category_1 = category_1
+	# 	cato_scholars$category_2 = category_2
+	#  cato_scholars$category_3 = category_3
+	#  cato_scholars$category_4 = category_4
+	#  cato_scholars$category_5 = category_5
+	# 	cato_scholars$title_category_1 = title_category_1
+	# 	cato_scholars$title_category_2 = title_category_2
+	# 	cato_scholars$title_category_3 = title_category_3
+	# 	cato_scholars$title_category_4 = title_category_4
+	# 	cato_scholars$title_category_4 = title_category_5
+
+write.xlsx(cato_scholars, "Cato_Scholars.xlsx")
+
+
+text_stats$author_categories=ifelse(grepl(paste(cato_scholars$category_1, collapse = "|"),
+																																										text_stats$top_terms,fixed=F)==T,cato_scholars$title_category_1,
+																																				ifelse(grepl(paste(cato_scholars$category_2, collapse = "|"),
+																																																	text_stats$top_terms,fixed=F)==T, cato_scholars$title_category_2,
+																																				ifelse(grepl(paste(cato_scholars$category_3, collapse = "|"),
+																																																	text_stats$top_terms,fixed=F)==T & is.na(cato_scholars$category_3)==F, cato_scholars$title_category_3,	
+																																				ifelse(grepl(paste(cato_scholars$category_4, collapse = "|"),
+																																																	text_stats$top_terms,fixed=F)==T & is.na(cato_scholars$category_3), cato_scholars$title_category_4,	
+																																				ifelse(grepl(paste(cato_scholars$category_5, collapse = "|"),
+																																																	text_stats$top_terms,fixed=F)==T & is.na(cato_scholars$category_3), cato_scholars$title_category_5,
+																																											"Other")))))
+
 # text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
 # 																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Crime",
 # 																		ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
@@ -415,196 +441,4 @@ print(paste0("save_docs(",last_name,").RData"))
 # 										ifelse(grepl(paste(category_3, collapse = "|"),df_final$top_terms,fixed=F)==T,"Culture/Assimilation",
 # 										ifelse(grepl(paste(category_4, collapse = "|"),df_final$top_terms,fixed=F)==T, "Economy/Employment",
 # 										ifelse(grepl(paste(category_5, collapse = "|"),df_final$top_terms,fixed=F)==T, "Fiscal/Welfare","Other")))))
-
-## Qualitative Text Analyses ##
-#custom_bigram <- content_transformer(function (x , pattern ) gsub(pattern, "paid_leave", x))
-# Primary WordCloud #
-doc=Corpus(VectorSource(save_docs))
-doc <- tm_map(doc, removeNumbers)
-doc <- tm_map(doc, tolower)
-doc <- tm_map(doc, stripWhitespace)
-doc <- tm_map(doc, removePunctuation)
-doc <- tm_map(doc, PlainTextDocument)
-doc <- tm_map(doc, toSpace, "/")
-doc <- tm_map(doc, toSpace, "@")
-#doc <- tm_map(doc, custom_bigram, "paid leave")
-doc <- tm_map(doc, toSpace, "\\|")
-doc <- tm_map(doc, toNothing, "-")
-doc <- tm_map(doc, toNothing, "—")
-doc <- tm_map(doc, toNothing, "–")
-doc <- tm_map(doc, removeWords, stopwords("english"))
-doc <- tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one'))
-# creating of document matrix
-tdm <- TermDocumentMatrix(doc, control = list(stemming = TRUE))
-#tdm <- TermDocumentMatrix(myCorpus, control = list(stemming = TRUE)) 
-tes=cbind(stems = rownames(tdm), completed = stemCompletion(rownames(tdm), doc))  
-m <- as.matrix(tes)
-
-v <- sort(rowSums(m),decreasing=TRUE)
-d <- data.frame(word = names(v),freq=v)
-head(d, 10)
-set.seed(12)
-cloud=wordcloud(words = d$word, freq = d$freq, min.freq = 3,	max.words=150, 
-										random.order = FALSE,rot.per=.05,vfont=c("sans serif","plain"),
-										colors=brewer.pal(8, "Dark2"))
-
-
-
-
-### Quantitative Analyses ###
-my_theme <- function(){
-	theme_light() +
-		theme(text = element_text(family = "Open Sans"),  
-								plot.title = element_text(size = 12, color = "gray30"),   # Set up the title style
-								plot.subtitle = element_text(size = 10, color = "black"), # Set up the subtitle style
-								plot.margin = unit(c(.1,.1,.1,.1), "cm"),                 # Add white space at the top and left
-								panel.grid = element_blank(),
-								#panel.border = element_blank(),
-								axis.title = element_blank(),
-								axis.ticks = element_blank(),
-								#axis.text.x = element_blank(),
-								axis.text.y = element_text(size = 9, color = "gray10"))
-}
-names(df_final)
-
-#Bar plot
-Bar_type_df =subset(df_final, type != "events") # Remove events
-Bar_type_df<-Bar_type_df %>% distinct(type,title,collaboration_yn,one)
-title_name=sprintf("%s's Content Breakdown",name)
-
-ggplot(data=Bar_type_df,aes(x=type,y=one,fill=collaboration_yn))+
-ggtitle(sprintf("%s's Content Breakdown ", name), # Add the title and subtitle
-									subtitle=sprintf("\n Total Content: %s",sum(Bar_type_df$one)))+
-	geom_bar(stat="identity", width=0.5)+ my_theme()+
-	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
-
-#Time per Article
-Audience_Captivation =subset(df_final, type != "events" & type != "multimedia") # Remove Events and Multimedia
-Audience_Captivation <- aggregate(avg_MinPerWord ~ title, Audience_Captivation, mean)
-
-# Happy
-Happy_audience=filter(Audience_Captivation, row_number(-avg_MinPerWord) <= 10)
-Happy_audience <- Happy_audience %>% arrange(avg_MinPerWord)
-Happy_audience$title<-factor(Happy_audience$title,levels=Happy_audience$title[order(Happy_audience$avg_MinPerWord)])
-ggplot(data=Happy_audience, aes(x=title, y=avg_MinPerWord)) +
-	ggtitle(sprintf("10 Best Audience Attrition", name),subtitle = "Time Spent per Word in Aticle Text" ) +
-	geom_bar(stat="identity", width=0.5)+ coord_flip() + my_theme()+ 
-	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
-
-# Sad Audience
-sad_audience<-filter(Audience_Captivation, row_number(avg_MinPerWord) <= 10)
-sad_audience <- sad_audience %>% arrange(avg_MinPerWord)
-sad_audience$title<-factor(sad_audience$title,levels=sad_audience$title[order(sad_audience$avg_MinPerWord)])
-ggplot(data=sad_audience, aes(x=title, y=avg_MinPerWord))+
-	ggtitle(sprintf("10 Worst Audience Attrition", name),subtitle="Time Spent per Word in Aticle Text")+
-	geom_bar(stat="identity", width=0.5)+ coord_flip() + my_theme()+
-	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
-
-# Line Chart
-total_line =subset(df_final, type != "events"&type !="multimedia") # Remove events
-total_line=aggregate(sessions ~ title + VBC_Issues + obs_day, total_line, sum)
-total_line %>%
-ggplot(aes(x=obs_day,y=sessions,group=VBC_Issues,colour=VBC_Issues))+geom_line()+
-	theme(axis.text.x=element_text(angle=90,hjust = 1),legend.position="none")+my_theme()+
-	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
-
-total_line <- total_line %>%
-		distinct(type, title, VBC_Issues, sessions, one)
-title_name=sprintf("%s's Content Breakdown", name)
-ggplot(data=total_line, aes(x=type, y=one, fill=VBC_Issues)) +
-	ggtitle(sprintf("%s's Content Breakdown ", name),  # Add the title and subtitle
-									subtitle = sprintf("\n Total Content: %s", sum(total_line$one))) +
-	geom_line(stat="identity")+
-	my_theme()+
-	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())
-
-
-page <- aggregate(sessions ~ date + page_name, gadata, sum)
-page %>%
-	ggplot(aes(x=date,y=sessions
-												,group=page_name
-												,colour=page_name
-	)) + 
-	geom_line()  + 
-	theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
-
-
-### group mtcars by cylinders and return some averages
-cars <- df1 %>%
-	select(title, pub_date, hp, qsec) %>%
-	group_by(cyl) %>%
-	summarise(mpg = mean(mpg), hp = mean(hp), qsec = mean(qsec))
-
-
-gadata = filter(gadata, !grepl("Caleb", dimension1) & !grepl('Cannon', dimension1) & !grepl('Levy', dimension1))
-gadata$date <- as.Date(gadata$date , "%Y-%m-%d")
-page <- aggregate(sessions ~ date + page_name, gadata, sum)
-page %>%
-ggplot(aes(x=date,y=sessions
-											,group=page_name
-											,colour=page_name
-											)) + 
-  geom_line()  + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
-  #+  scale_x_date(date_breaks = "20 days", date_labels = "%Y-%m-%d")
-		
-  # some styles to rotate x-axis labels
-
-#barchart
-bar <- aggregate(page_name ~ sessions, gadata, sum)
-ggplot(data=bar, aes(x=page_name, y=sessions)) +
-  geom_bar(stat="identity", width=0.5)
-
-page %>%
-ggplot(aes(x=date,y=pageviews,group=1)) + 
-  geom_line() + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-  # some styles to rotate x-axis labels
-
-ggplot(data=df, aes(x=dose, y=len)) +
-  geom_bar(stat="identity", width=0.5)
-
-gadata3 %>%
-ggplot(aes(x=date, y=pageviews)) +
-  geom_point()
-theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-gadata %>%
-ggplot(aes(x=date, y=pageviews)) +
-  geom_point() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-size = pageviews
-
-gadata %>%
-ggplot(aes(x=date, y=pageviews, size = pageviews)) +
-  geom_point() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-
-page %>%
-ggplot(aes(x = page$date,y = page$pageviews) ) + 
-  geom_point() + 
-  geom_smooth() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 2)) +
-  			labs(x = "Date", y = 'Page Views', title = "Vanessa Calder 2018")
-
-
-
-Names <- character(length(x))
-for(i in seq_along(x)){
-	Names[i] <- paste0("A_", i, ".png") 
-}
-
-
-somePDFPath = "C:\\temp\\some.pdf"
-pdf(file=somePDFPath)  
-
-for (i in seq(5,10))   
-{   
-	par(mfrow = c(2,1))
-	VAR1=rnorm(i)  
-	VAR2=rnorm(i)  
-	plot(VAR1,VAR2)   
-} 
-dev.off() 
 
