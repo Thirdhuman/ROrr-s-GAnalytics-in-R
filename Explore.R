@@ -289,6 +289,10 @@ for(k in 1:nrow(text_stats)){
 ## Generate Author's Custom Categories ##
 unique(text_stats$top_terms[1:50])
 
+
+stopifnot(cato_scholars$name.website==name&is.na(cato_scholars$category_1))
+
+print(name)
 # Michael D. Tanner Categories
 # category_1=c('poverty', 'welfare', 'zoning', 'tanf','prwora','snap','dole','racism', 'charity', 'dependency', 'antipoverty', 'poor', 'credit')
 # category_2=c('social', 'security' ,'retirement', 'stocks', 'bonds')
@@ -332,32 +336,19 @@ cato_scholars$title_category_3=ifelse(cato_scholars$name.website==name&is.na(cat
 cato_scholars$title_category_4=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_4),list(title_category_4),cato_scholars$title_category_4)
 cato_scholars$title_category_5=ifelse(cato_scholars$name.website==name&is.na(cato_scholars$title_category_5),list(title_category_5),cato_scholars$title_category_5)
 
-
-	#  cato_scholars$category_1 = category_1
-	# 	cato_scholars$category_2 = category_2
-	#  cato_scholars$category_3 = category_3
-	#  cato_scholars$category_4 = category_4
-	#  cato_scholars$category_5 = category_5
-	# 	cato_scholars$title_category_1 = title_category_1
-	# 	cato_scholars$title_category_2 = title_category_2
-	# 	cato_scholars$title_category_3 = title_category_3
-	# 	cato_scholars$title_category_4 = title_category_4
-	# 	cato_scholars$title_category_4 = title_category_5
-
 write.xlsx(cato_scholars, "Cato_Scholars.xlsx")
 
 
-text_stats$author_categories=ifelse(grepl(paste(cato_scholars$category_1, collapse = "|"),
+text_stats$author_categories=ifelse(grepl(paste(cato_scholars$category_1,collapse ="|"),
 																																										text_stats$top_terms,fixed=F)==T,cato_scholars$title_category_1,
-																																				ifelse(grepl(paste(cato_scholars$category_2, collapse = "|"),
-																																																	text_stats$top_terms,fixed=F)==T, cato_scholars$title_category_2,
-																																				ifelse(grepl(paste(cato_scholars$category_3, collapse = "|"),
-																																																	text_stats$top_terms,fixed=F)==T & is.na(cato_scholars$category_3)==F, cato_scholars$title_category_3,	
-																																				ifelse(grepl(paste(cato_scholars$category_4, collapse = "|"),
-																																																	text_stats$top_terms,fixed=F)==T & is.na(cato_scholars$category_3), cato_scholars$title_category_4,	
-																																				ifelse(grepl(paste(cato_scholars$category_5, collapse = "|"),
-																																																	text_stats$top_terms,fixed=F)==T & is.na(cato_scholars$category_3), cato_scholars$title_category_5,
-																																											"Other")))))
+																																				ifelse(grepl(paste(cato_scholars$category_2,collapse = "|"),
+																																										text_stats$top_terms,fixed=F)==T, cato_scholars$title_category_2,
+																																				ifelse(grepl(paste(cato_scholars$category_3,collapse = "|"),
+																																									 text_stats$top_terms,fixed=F)==T&is.na(cato_scholars$category_3)==F,cato_scholars$title_category_3,
+																																				ifelse(grepl(paste(cato_scholars$category_4, collapse ="|"),
+																																										text_stats$top_terms,fixed=F)==T&is.na(cato_scholars$category_3),cato_scholars$title_category_4,
+																																				ifelse(grepl(paste(cato_scholars$category_5,collapse="|"),
+																																										text_stats$top_terms,fixed=F)==T&is.na(cato_scholars$category_3),cato_scholars$title_category_5,																																				   "Other")))))
 
 # text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
 # 																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Crime",
