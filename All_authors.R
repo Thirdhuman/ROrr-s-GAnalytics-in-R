@@ -41,14 +41,20 @@ name=targets$name.website
 name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
 
+
+authur_list=as.data.frame(cato_scholars$name.website)
+authur_row=as.data.frame(cato_scholars$name.website)
+colnames(authur_row) = authur_row[1, ] # the first row will be the header
+authur_row = authur_row[-1, ]          # removing the first row.
+authur_row=as.vector(as.character(authur_row))
+
 # view id of your Google Analytics view where 1 conversion = visit
 vid <- "3016983"
-
 # Establish date range
 from <- "2014-06-30" # (Earliest Available)
 from <- "2018-07-01" # (Insert Other)
 to   <- as.character(current_date)
-## create filters on dimensions
+#### create filters on dimensions ####
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
 dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
 fc2 <- filter_clause_ga4(list(# dimf #,dimf2
@@ -106,6 +112,46 @@ save(gadata, file = "Last_Raw_GA_DAT.RData")
 load( file = "Last_Raw_GA_DAT.RData")
 #######
 df1 = as.data.frame(gadata)
+#df1$author=NULL
+df1[as.character(authur_row)] <- NA_character_
+# for( i in length(df1)){
+# 		grepl("d", names(df1))
+# 
+# }
+#length((authur_row))
+
+grepl(df1$author_full[,5], colnames(df1)[i]) == df1[j, i]
+
+faster_loop=df1[ , ]
+
+colnames(df1)[15]
+(df1[10, ])
+#66-52=14
+for (i in 15:length(df1)){
+	for (j in 1:nrow(df1)) {
+#df1[j,i]=
+	ifelse(grepl(df1[j,10], colnames(df1)[i]) == df1[, i], TRUE, FALSE)}}
+
+for (i in 15:length(df1)){
+	for (j in 1:nrow(df1)) {
+df1[j,i]=	ifelse(grepl(df1[j,10], colnames(df1)), TRUE, FALSE)}}
+
+
+df1[, authur_row]=sapply(authur_row, function(x){ifelse(grepl(df1$author_full,as.character(x)) == df1[,x], df1$x=TRUE, df1$x=FALSE)})
+
+lapply(dfList, function(x) {
+                    names(x)[ grep(x, names(x))] <- T
+                    x} )
+
+df1[, authur_row] <- sapply(authur_row, function(x){
+   ifelse(df1[, "x1"] < 0, df[, paste0(x, ".y")], df[, paste0(x, ".x")])
+})
+specialnames <- setdiff(names(mydf), c("A", "B"))
+
+for (i in seq_along(authur_row)) {
+  print(head(df1[authur_list[i]], 2))
+}
+
 rm(gadata)
 
 #####################################################
