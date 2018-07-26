@@ -7,7 +7,7 @@ loadfonts()
 getwd()
 # My Packages
 library(googleAnalyticsR)
-library(dplyr)
+library(tidyverse)
 library(httr)
 library(RCurl)
 library(XML)
@@ -41,8 +41,6 @@ name=targets$name.website
 name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
 
-
-authur_list=as.data.frame(cato_scholars$name.website)
 authur_row=as.data.frame(cato_scholars$name.website)
 colnames(authur_row) = authur_row[1, ] # the first row will be the header
 authur_row = authur_row[-1, ]          # removing the first row.
@@ -52,7 +50,7 @@ authur_row=as.vector(as.character(authur_row))
 vid <- "3016983"
 # Establish date range
 from <- "2014-06-30" # (Earliest Available)
-from <- "2018-07-01" # (Insert Other)
+#from <- "2018-07-01" # (Insert Other)
 to   <- as.character(current_date)
 #### create filters on dimensions ####
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -77,19 +75,18 @@ initials <- function(a, b){
 analysis_identifier=initials(name,analysis_range)
 
 #### Specify Search terms ####
-max = 50000000
+max = 500000000
 met = c("sessions", #"pageviews",
 								'timeOnPage','avgTimeOnPage',
 								"entrances","bounces", 'exitRate')
 dim = c("date", 
-								"ga:dimension1", 'channelGrouping',# 'city', 'region',
+								"ga:dimension1", #'channelGrouping',# 'city', 'region',
 								#'ga:dimension2', 
 								'pagePath')
 
-lst <- sapply(str_extract_all(name), function(x) substr(x, 0, 2))
+#lst <- sapply(str_extract_all(name), function(x) substr(x, 0, 2))
 
 #### Launch Google Analytic Retrieval Function ####
-df2 = data.frame()
 get_data=function(vid,from,to,dim,met,max){df=google_analytics(
 			viewId=vid,date_range=c(from,to),metrics=met,dimensions=dim, #met_filters = fc, 
  		dim_filters = fc2,  max = max	,anti_sample = TRUE)
@@ -97,62 +94,24 @@ get_data=function(vid,from,to,dim,met,max){df=google_analytics(
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
 		df$author_full=df$dimension1
 		df$dimension1 <- NULL
-		df$author=name
-		df$co_authors = gsub(name, '', df$author_full)
-		df$co_authors = gsub("^,*|(?<=,),|,*$", "", df$co_authors, perl=T)
-		df$co_authors=gsub(', , ', ', ', df$co_authors)
-		df$co_authors=trimws(df$co_authors)
-		df$collaboration_yn=ifelse(df$author==df$author_full,"Sole Author",
-																						ifelse(df$author!=df$author_full|!is.na(df$co_authors),"Co-Authored",0))
-df$ID <- paste0(sapply(lst, function(x) paste(x, collapse = '')), df$Year)
 df}
 gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
-save(gadata, file = "Last_Raw_GA_DAT.RData")
+save(gadata, file = "Big_Raw_GA_DAT.RData")
 #######
-load( file = "Last_Raw_GA_DAT.RData")
+load( file = "Big_Raw_GA_DAT.RData")
 #######
 df1 = as.data.frame(gadata)
-#df1$author=NULL
-df1[as.character(authur_row)] <- NA_character_
-# for( i in length(df1)){
-# 		grepl("d", names(df1))
-# 
-# }
-#length((authur_row))
+df1[as.character(authur_row)] = NA
 
-grepl(df1$author_full[,5], colnames(df1)[i]) == df1[j, i]
-
-faster_loop=df1[ , ]
-
-colnames(df1)[15]
-(df1[10, ])
-#66-52=14
-for (i in 15:length(df1)){
-	for (j in 1:nrow(df1)) {
-#df1[j,i]=
-	ifelse(grepl(df1[j,10], colnames(df1)[i]) == df1[, i], TRUE, FALSE)}}
-
-for (i in 15:length(df1)){
-	for (j in 1:nrow(df1)) {
-df1[j,i]=	ifelse(grepl(df1[j,10], colnames(df1)), TRUE, FALSE)}}
-
-
-df1[, authur_row]=sapply(authur_row, function(x){ifelse(grepl(df1$author_full,as.character(x)) == df1[,x], df1$x=TRUE, df1$x=FALSE)})
-
-lapply(dfList, function(x) {
-                    names(x)[ grep(x, names(x))] <- T
-                    x} )
-
-df1[, authur_row] <- sapply(authur_row, function(x){
-   ifelse(df1[, "x1"] < 0, df[, paste0(x, ".y")], df[, paste0(x, ".x")])
-})
-specialnames <- setdiff(names(mydf), c("A", "B"))
-
-for (i in seq_along(authur_row)) {
-  print(head(df1[authur_list[i]], 2))
-}
-
-rm(gadata)
+### Stop here if column #s are altered since previous analysis ###
+colnames(df1)
+df1$ID=NULL
+df1_1=df1[ ,1:8]
+df1_2=df1[ ,9:61]
+df1_2[-1] = lapply(names(df1_2[-1]), function(nm) grepl(nm, df1_2[[1]]))
+df1=cbind(df1_1,df1_2)
+rm(gadata, dim, dimf, dimf2, fc2,ga_id, met, max, vid)
+rm(df1_1,df1_2)
 
 #####################################################
 #### Initialize Cleanup of Google Analytics Data ####
@@ -211,18 +170,15 @@ df1$pagePath1=df1$pagePath
 df1$pagePath=df1$pagePath2
 df1$pagePath2=NULL
 
-df1=df1[grep(name, rownames(df1)), ]
+save(df1, file = "Big_Cleaned_DAT.RData")
+#######
+load( file = "Big_Cleaned_DAT.RData")
 
 #####################################################
 ################ Scrape Cato Web Data ############### 
 #####################################################
+#df_final= data.frame()
 
-df_final= data.frame()
-web_df= data.frame()
-
-df_full
-
-df1=df1[grep(name, rownames(df1)), ]
 df1$ID <- seq.int(nrow(df1))
 url_vector_full=df1[["pagePath"]]
 url_vector=unique(url_vector_full)
@@ -237,15 +193,45 @@ SafeGet = function (x)	{
 	return(title)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
+  library(curl)
+  # Init list of urls to be read
+  url_vector_full=df1[["pagePath"]]
+  url_vector=unique(url_vector_full)
+  parsed_url <- list()
+
+  cb <- function(req){
+    parsed_url <<- append(parsed_url, list(rawToChar(req$content)))
+  }
+
+  # Specify chunk size to prevent exceeding API rate limit
+  chunk_size <- 50
+  for (i in 1:ceiling(length(url_vector) / chunk_size)) {
+    pool <- new_pool()
+    # vector of uris to loop through
+    uris <- url_vector[(i + (i - 1) * (chunk_size - 1)):(i * chunk_size)]
+    # all scheduled requests are performed concurrently
+    sapply(uris, curl_fetch_multi, done=cb, pool=pool)
+    # Perform requests
+    out <- multi_run(pool = pool)
+    # Print out number of successes each round
+    cat(sum(out$success))
+    # Delay calls to prevent exceeding speed limit
+    Sys.sleep(2)
+  }
+
+# split_df       <- split(big_df, big_df$ID)
+# result_list_df <- lapply(split_df, complex_func)
+# result_df      <- do.call(rbind, result_list_df)
+
 website_responses <- pbmclapply(url_vector, SafeGet, mc.preschedule=T)
 title=trimws(website_responses)
 link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 link_df_full=as.data.frame(cbind(pagePath=url_vector_full))
 linked_title= merge(link_df_full, link_df, by=('pagePath'), all.x=T)
 
-save(title, file = "Title_Vector.RData")
+save(title, file = "Big_Title_Vector.RData")
 #######
-load( file = "Title_Vector.RData")
+load( file = "Big_Title_Vector.RData")
 
 linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
@@ -265,7 +251,6 @@ linked_type=unique(linked_type)
 df_intermediate <- merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
 # Extract web content from Cato Website
-df3= data.frame()
 text_content <- df_intermediate %>%
 	distinct(pagePath, title, type)
 text_content=text_content[!duplicated(text_content),]
@@ -340,7 +325,6 @@ for(k in 1:nrow(text_stats)){
 ## Generate Author's Custom Categories ##
 unique(text_stats$top_terms[1:50])
 
-
 stopifnot(cato_scholars$name.website==name&is.na(cato_scholars$category_1))
 
 print(name)
@@ -352,6 +336,19 @@ print(name)
 
 
 #Alex Nowrasteh Categories
+title_category_1=c("Terorism")
+title_category_2=c("Crime")
+title_category_3=c("Culture/Assimilation")
+title_category_4=c("Economy/Employment")
+title_category_5=c("Fiscal/Welfare")
+
+# text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
+# 																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Crime",
+# 																		ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
+# 																		ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Economy/Employment",
+# 																		ifelse(grepl(paste(category_5, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Fiscal/Welfare",
+# 																		"Other")))))
+
 # category_1=c('terrorist', 'terrorism', 'muslim', 'security')
 # category_2=c('murder', 'crime','murdered', 'incarceration', 'prison','criminality')
 # category_3=c('assimilation', 'generation','descendants', 'generations','vote')
@@ -399,12 +396,6 @@ text_stats$author_categories=ifelse(grepl(paste(cato_scholars$category_1,collaps
 																																				ifelse(grepl(paste(cato_scholars$category_5,collapse="|"),
 																																										text_stats$top_terms,fixed=F)==T&is.na(cato_scholars$category_3),cato_scholars$title_category_5,																																				   "Other")))))
 
-# text_stats$author_categories=ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Terorism",
-# 																		ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Crime",
-# 																		ifelse(grepl(paste(category_3, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Culture/Assimilation",
-# 																		ifelse(grepl(paste(category_4, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Economy/Employment",
-# 																		ifelse(grepl(paste(category_5, collapse = "|"),text_stats$top_terms,fixed=F)==T, "Fiscal/Welfare",
-# 																		"Other")))))
 
 text_stats$author_categories=ifelse(grepl(paste(category_2, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Women's Issues",ifelse(grepl(paste(category_1, collapse = "|"),text_stats$top_terms,fixed=F)==T,"Housing",
  																		"Other"))
@@ -466,6 +457,12 @@ save(df_final, file = paste0(analysis_identifier,".RData"))
 save(doc, file = paste0("save_docs(",last_name,").RData"))
 print(paste0(analysis_identifier,".RData"))
 print(paste0("save_docs(",last_name,").RData"))
+
+
+# save(df_final, file = paste0(analysis_identifier,".RData"))
+# save(doc, file = paste0("save_docs(",last_name,").RData"))
+# print(paste0(analysis_identifier,".RData"))
+# print(paste0("save_docs(",last_name,").RData"))
 
 # load("AlNo(0515-0518).RData")
 # save(df_final, file = 'AlNo(0515-0518).RData')
