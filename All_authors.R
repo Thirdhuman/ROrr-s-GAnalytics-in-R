@@ -171,18 +171,35 @@ df1$pagePath=df1$pagePath2
 df1$pagePath2=NULL
 
 save(df1, file = "Big_Cleaned_DAT.RData")
-#######
-load( file = "Big_Cleaned_DAT.RData")
 
 #####################################################
 ################ Scrape Cato Web Data ############### 
 #####################################################
-#df_final= data.frame()
-
+load( file = "Big_Cleaned_DAT.RData")
+#### Split ####
 df1$ID <- seq.int(nrow(df1))
 url_vector_full=df1[["pagePath"]]
 url_vector=unique(url_vector_full)
+split_url_vector = split(url_vector, ceiling(seq_along(url_vector)/5000))
+split_1=split_url_vector[[1]]
+split_2=split_url_vector[[2]]
+split_3=split_url_vector[[3]]
+split_4=split_url_vector[[4]]
+split_5=split_url_vector[[5]]
+split_6=split_url_vector[[6]]
+split_7=split_url_vector[[7]]
+split_8=split_url_vector[[8]]
+split_9=split_url_vector[[9]]
+split_10=split_url_vector[[10]]
+split_11=split_url_vector[[11]]
+split_12=split_url_vector[[12]]
+split_13=split_url_vector[[13]]
 
+html=GET('www.cato.org/event.php?eventid=3807')
+parsed=htmlParse(html)
+	root=xmlRoot(parsed)
+
+#### Apply ####
 SafeGet = function (x)	{
 	tryCatch({
 	#	short_url_vector
@@ -190,49 +207,76 @@ SafeGet = function (x)	{
 	parsed=htmlParse(html)
 	root=xmlRoot(parsed)
 	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
-	return(title)},
+	return(title)	
+	Sys.sleep(1)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
-  library(curl)
-  # Init list of urls to be read
-  url_vector_full=df1[["pagePath"]]
-  url_vector=unique(url_vector_full)
-  parsed_url <- list()
+# responses_1_1 <- pbmclapply(split_1, SafeGet, mc.preschedule=T)
+# identical(responses_1_1,responses_1)
+responses_1 <- pbmclapply(split_1, SafeGet, mc.preschedule=T)
+responses_2 <- pbmclapply(split_2, SafeGet, mc.preschedule=T)
+responses_3 <- pbmclapply(split_3, SafeGet, mc.preschedule=T)
+responses_4 <- pbmclapply(split_4, SafeGet, mc.preschedule=T)
+responses_5 <- pbmclapply(split_5, SafeGet, mc.preschedule=T)
+responses_6 <- pbmclapply(split_6, SafeGet, mc.preschedule=T)
+responses_7 <- pbmclapply(split_7, SafeGet, mc.preschedule=T)
+responses_8 <- pbmclapply(split_8, SafeGet, mc.preschedule=T)
+responses_9 <- pbmclapply(split_9, SafeGet, mc.preschedule=T)
+responses_10 <- pbmclapply(split_10, SafeGet, mc.preschedule=T)
+responses_11 <- pbmclapply(split_11, SafeGet, mc.preschedule=T)
+responses_12 <- pbmclapply(split_12, SafeGet, mc.preschedule=T)
+responses_13 <- pbmclapply(split_13, SafeGet, mc.preschedule=T)
 
-  cb <- function(req){
-    parsed_url <<- append(parsed_url, list(rawToChar(req$content)))
-  }
+############# Load and Save #################
+save(responses_1, file = "responses_1.RData")
+save(responses_2, file = "responses_2.RData")
+save(responses_3, file = "responses_3.RData")
+save(responses_4, file = "responses_4.RData")
+save(responses_5, file = "responses_5.RData")
+save(responses_6, file = "responses_6.RData")
+save(responses_7, file = "responses_7.RData")
+save(responses_8, file = "responses_8.RData")
+save(responses_9, file = "responses_9.RData")
+save(responses_10, file = "responses_10.RData")
+save(responses_11, file = "responses_11.RData")
+save(responses_12, file = "responses_12.RData")
+save(responses_13, file = "responses_13.RData")
+# Load
+load(file = "responses_1.RData")
+load(file = "responses_2.RData")
+load(file = "responses_3.RData")
+load(file = "responses_4.RData")
+load(file = "responses_5.RData")
+load(file = "responses_6.RData")
+load(file = "responses_7.RData")
+load(file = "responses_8.RData")
+load(file = "responses_9.RData")
+load(file = "responses_10.RData")
+load(file = "responses_11.RData")
+load(file = "responses_12.RData")
+load(file = "responses_13.RData")
 
-  # Specify chunk size to prevent exceeding API rate limit
-  chunk_size <- 50
-  for (i in 1:ceiling(length(url_vector) / chunk_size)) {
-    pool <- new_pool()
-    # vector of uris to loop through
-    uris <- url_vector[(i + (i - 1) * (chunk_size - 1)):(i * chunk_size)]
-    # all scheduled requests are performed concurrently
-    sapply(uris, curl_fetch_multi, done=cb, pool=pool)
-    # Perform requests
-    out <- multi_run(pool = pool)
-    # Print out number of successes each round
-    cat(sum(out$success))
-    # Delay calls to prevent exceeding speed limit
-    Sys.sleep(2)
-  }
+#################### Combine ########################## 
+website_responses=lapply(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
+		responses_8,responses_9,responses_10,responses_11, responses_12,responses_13), as.character)
+is.na(website_responses) <- lengths(website_responses) == 0
+website_responses[lengths(website_responses) == 0] <- NA_character_
 
-# split_df       <- split(big_df, big_df$ID)
-# result_list_df <- lapply(split_df, complex_func)
-# result_df      <- do.call(rbind, result_list_df)
-
-website_responses <- pbmclapply(url_vector, SafeGet, mc.preschedule=T)
 title=trimws(website_responses)
 link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 link_df_full=as.data.frame(cbind(pagePath=url_vector_full))
 linked_title= merge(link_df_full, link_df, by=('pagePath'), all.x=T)
 
+############# End of Split-Apply-Combine #################
 save(title, file = "Big_Title_Vector.RData")
-#######
 load( file = "Big_Title_Vector.RData")
 
+save(linked_title, file = "Big_LinkedTitle.RData")
+load( file = "Big_LinkedTitle.RData")
+
+########################################################
+############# Recieve additional web data ##############
+########################################################
 linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
@@ -249,7 +293,19 @@ type_df_full=as.data.frame(cbind(pagePath=url_vector_full))
 linked_type= merge(type_df_full, type_df, by=('pagePath'), all.x=T)
 linked_type=unique(linked_type)
 df_intermediate <- merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+df_intermediate$type = unlist(df_intermediate$type)
 
+library(stringdist)
+
+ClosestMatch2 = function(string, stringVector){
+  stringVector[amatch(string, stringVector, maxDist=Inf)]
+}
+
+
+df_int_fail = df_intermediate[df_intermediate$title == NA,]
+
+
+str(df_intermediate)
 # Extract web content from Cato Website
 text_content <- df_intermediate %>%
 	distinct(pagePath, title, type)
@@ -280,10 +336,13 @@ tags_output = pbmclapply(text_responses, function (filename) {
 		topics = xpathSApply(doc, "//div[@class='field-topics inline']", xmlValue)
 		topics =  gsub("\n", ' ', topics)
 		topics=trimws((topics))})
-
 	text_df=data.frame(cbind(body=body_vector,body_count=body_count,topics=topics_output,tags=tags_output,pub_date=pub_date_output ))
 	text_stats <- cbind(text_content, text_df)
-	
+
+#######################################################
+######## Text Analysis	- Generate Text Wall ###########
+#######################################################
+
 # Text Analysis	- Generate Text Wall	
 text_wall <- text_df %>%
 	distinct(title, body,tags)

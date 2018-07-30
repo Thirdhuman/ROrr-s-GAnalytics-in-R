@@ -13,3 +13,5 @@ Big_Raw_GA_DAT.RData
 Big_Cleaned_DAT.RData
 Last_Raw_GA_DAT.RData
 Last_Raw_GA_DAT.RData
+*.RData
+*.xml

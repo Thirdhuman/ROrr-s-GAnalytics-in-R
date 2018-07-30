@@ -29,6 +29,29 @@ response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
 load( file = "NAME_SAMPLE.RData")
 #cato-twitter-feeds
 
+scholars=read.csv('Cato_Scholars.csv')
+
+ClosestMatch2 =  function(string, stringVector){
+  stringVector[amatch(string, stringVector, maxDist=Inf)]}
+
+website.names = list()
+for(i in seq_along(scholars$users.names)){
+	temp=scholars$users.names[i]
+	website.names[i] = ClosestMatch2(temp, df1$author_full) 
+}
+
+scholars$name.website=website.names
+scholars=as.data.frame(scholars)
+as.data.frame()
+df1$author_full
+
+
+website.names
+
+ClosestMatch2(name, scholars$users.names)
+
+
+
 response.list <- fromJSON(content(response, as = "text", encoding = "UTF-8"))
 users.names <- sapply(response.list$users, function(i) i$name)
 users.screennames <- sapply(response.list$users, function(i) i$screen_name)
