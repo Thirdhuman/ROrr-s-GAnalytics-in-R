@@ -18,10 +18,7 @@ library(data.table)
 library(stringdist)
 library(pbmcapply)
 library(openxlsx)
-
 #library(plyr)
-
-## Define Functions ##
 
 ########################################################################################## 
 ###################################### Begin script ###################################### 
@@ -46,11 +43,9 @@ colnames(authur_row) = authur_row[1, ] # the first row will be the header
 authur_row = authur_row[-1, ]          # removing the first row.
 authur_row=as.vector(as.character(authur_row))
 
-# view id of your Google Analytics view where 1 conversion = visit
-vid <- "3016983"
 # Establish date range
-from <- "2014-06-30" # (Earliest Available)
-#from <- "2018-07-01" # (Insert Other)
+#from <- "2014-06-30" # (Earliest Available)
+from <- "2018-7-14" # (Insert Other)
 to   <- as.character(current_date)
 #### create filters on dimensions ####
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -79,23 +74,36 @@ max = 500000000
 met = c("sessions", #"pageviews",
 								'timeOnPage','avgTimeOnPage',
 								"entrances","bounces", 'exitRate')
-dim = c("date", 
+dim = c("date", 'pageTitle',
 								"ga:dimension1", #'channelGrouping',# 'city', 'region',
 								#'ga:dimension2', 
-								'pagePath')
+								'pagePath','pagePathLevel1','pagePathLevel2')
 
 #lst <- sapply(str_extract_all(name), function(x) substr(x, 0, 2))
-
+# view id of your Google Analytics view where 1 conversion = visit
+vid <- "3016983"
 #### Launch Google Analytic Retrieval Function ####
 get_data=function(vid,from,to,dim,met,max){df=google_analytics(
 			viewId=vid,date_range=c(from,to),metrics=met,dimensions=dim, #met_filters = fc, 
  		dim_filters = fc2,  max = max	,anti_sample = TRUE)
 # clean up and set class
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
+		df$dimension1 = gsub('&quot;Chip&quot;', "\"Chip\"", df$dimension1)
 		df$author_full=df$dimension1
 		df$dimension1 <- NULL
 df}
 gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
+
+df1 = as.data.frame(gadata)
+names(df1)
+df1$pageTitle <- gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle)
+df1$pageTitle <- sub(" | .*","",df1$pageTitle)
+
+df1$pageTitle=sub(" | .*", "", df1$pageTitle)
+
+
+df1 <- df1[!grepl("search/srpcache", df1$pageTitle),]
+
 save(gadata, file = "Big_Raw_GA_DAT.RData")
 #######
 load( file = "Big_Raw_GA_DAT.RData")
@@ -165,19 +173,74 @@ df1$pagePath2= gsub("proxy.unfake.us/proxy/350/", "www.cato.org/blog/", df1$page
 df1$pagePath2=ifelse(grepl("php$", df1$pagePath2)==T, df1$pagePath, df1$pagePath2)
 refcols <- c("obs_day", 'pagePath', 'pagePath2') 
 df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
-
 df1$pagePath1=df1$pagePath
 df1$pagePath=df1$pagePath2
 df1$pagePath2=NULL
+df1$ID <- seq.int(nrow(df1))
+
+########################################################
+############# Match with Cato Sitemap XML ##############
+########################################################
+library(stringdist)
+require(XML)
+library(data.table)
+url_1=download_xml('https://www.cato.org/sitemap.xml?page=1')
+url_2=download_xml('https://www.cato.org/sitemap.xml?page=2')
+# Read XML 1
+xmlfile <- xmlParse(url_1)
+# Convert to List
+tagsList <- xmlToList(xmlfile)
+# Each List element is a character vector.  Convert each of these into a data.table
+tagsList <- lapply(tagsList, function(x) as.data.table(as.list(x)))
+# Rbind all the 1-row data.tables into a single data.table
+tags_1 <- rbindlist(tagsList, use.names = T, fill = T)
+tags_1=as.data.frame(tags_1)
+# Read XML 2
+xmlfile <- xmlParse(url_2)
+# Convert to List
+tagsList <- xmlToList(xmlfile)
+# Each List element is a character vector.  Convert each of these into a data.table
+tagsList <- lapply(tagsList, function(x) as.data.table(as.list(x)))
+# Rbind all the 1-row data.tables into a single data.table
+tags_2 <- rbindlist(tagsList, use.names = T, fill = T)
+tags_2=as.data.frame(tags_2)
+url_list=as.list(rbind(tags_2$loc, tags_2$loc))
+rm(tagsList,tags_2,tags_1,xmlfile,url_2,url_1)
+url_list=as.vector(url_list)
+
+df_int_fail <- subset(df_intermediate, (df_intermediate$title)=="NA")
+#df_int_success <- subset(df_intermediate, (df_intermediate$title)!="NA")
+
+url_vector_dfi=df_int_fail[["pagePath"]]
+url_vector_dfi=as.vector(unique(url_vector_dfi))
+url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
+
+#ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
+ClosestMatch3 = function(string){url_list[amatch(string, url_list, maxDist=40,nomatch=0)]}
+
+#ClosestMatch2(url_vector_dfi, url_list)
+alt_page=pbmclapply(url_vector_dfi, ClosestMatch3)
+
+
+is.na(alt_page) = lengths(alt_page) == 0
+alt_page[lengths(alt_page) == 0] = 0
+alt_page_ <- as.data.frame(alt_page)
+
+alt_page_ <- rbindlist(alt_page_, use.names = T, fill = T)
+match_output=as.data.frame(cbind(url_vector_dfi,((alt_page))))
+match_output$V2=lapply(match_output$V2,unlist)
+match_output$V2=ifelse(match_output$V2=='https://www.cato.org/cato40',NA,match_output$V2)
+
+
+
+
 
 save(df1, file = "Big_Cleaned_DAT.RData")
-
 #####################################################
 ################ Scrape Cato Web Data ############### 
 #####################################################
 load( file = "Big_Cleaned_DAT.RData")
 #### Split ####
-df1$ID <- seq.int(nrow(df1))
 url_vector_full=df1[["pagePath"]]
 url_vector=unique(url_vector_full)
 split_url_vector = split(url_vector, ceiling(seq_along(url_vector)/5000))
@@ -194,10 +257,6 @@ split_10=split_url_vector[[10]]
 split_11=split_url_vector[[11]]
 split_12=split_url_vector[[12]]
 split_13=split_url_vector[[13]]
-
-html=GET('www.cato.org/event.php?eventid=3807')
-parsed=htmlParse(html)
-	root=xmlRoot(parsed)
 
 #### Apply ####
 SafeGet = function (x)	{
@@ -259,26 +318,29 @@ load(file = "responses_13.RData")
 #################### Combine ########################## 
 website_responses=lapply(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
 		responses_8,responses_9,responses_10,responses_11, responses_12,responses_13), as.character)
-is.na(website_responses) <- lengths(website_responses) == 0
-website_responses[lengths(website_responses) == 0] <- NA_character_
+is.na(website_responses) = lengths(website_responses) == 0
+website_responses[lengths(website_responses) == 0] = NA
 
 title=trimws(website_responses)
 link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 link_df_full=as.data.frame(cbind(pagePath=url_vector_full))
 linked_title= merge(link_df_full, link_df, by=('pagePath'), all.x=T)
+df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
-############# End of Split-Apply-Combine #################
+############# Save Split-Apply-Combine #################
 save(title, file = "Big_Title_Vector.RData")
-load( file = "Big_Title_Vector.RData")
-
 save(linked_title, file = "Big_LinkedTitle.RData")
-load( file = "Big_LinkedTitle.RData")
 
+load( file = "Big_Title_Vector.RData")
+load( file = "Big_LinkedTitle.RData")
+linked_title=unique(linked_title)
+df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+
+save(df_intermediate, file = "df_intermediate.RData")
 ########################################################
 ############# Recieve additional web data ##############
 ########################################################
-linked_title=unique(linked_title)
-df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+load( file = "df_intermediate.RData")
 
 type_list <- pbmclapply(url_vector, function(url){
 																type = gsub('www.cato.org*/|/.*', "\\1", url)
@@ -295,17 +357,6 @@ linked_type=unique(linked_type)
 df_intermediate <- merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 df_intermediate$type = unlist(df_intermediate$type)
 
-library(stringdist)
-
-ClosestMatch2 = function(string, stringVector){
-  stringVector[amatch(string, stringVector, maxDist=Inf)]
-}
-
-
-df_int_fail = df_intermediate[df_intermediate$title == NA,]
-
-
-str(df_intermediate)
 # Extract web content from Cato Website
 text_content <- df_intermediate %>%
 	distinct(pagePath, title, type)
@@ -342,6 +393,7 @@ tags_output = pbmclapply(text_responses, function (filename) {
 #######################################################
 ######## Text Analysis	- Generate Text Wall ###########
 #######################################################
+split_url_vector = split(, ceiling(seq_along(url_vector)/5000))
 
 # Text Analysis	- Generate Text Wall	
 text_wall <- text_df %>%
