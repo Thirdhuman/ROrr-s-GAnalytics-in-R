@@ -44,8 +44,8 @@ authur_row = authur_row[-1, ]          # removing the first row.
 authur_row=as.vector(as.character(authur_row))
 
 # Establish date range
-#from <- "2014-06-30" # (Earliest Available)
-from <- "2018-7-14" # (Insert Other)
+from <- "2014-07-01" # (Earliest Available)
+#from <- "2018-7-14" # (Insert Other)
 to   <- as.character(current_date)
 #### create filters on dimensions ####
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
@@ -77,7 +77,7 @@ met = c("sessions", #"pageviews",
 dim = c("date", 'pageTitle',
 								"ga:dimension1", #'channelGrouping',# 'city', 'region',
 								#'ga:dimension2', 
-								'pagePath','pagePathLevel1','pagePathLevel2')
+								'pagePath')
 
 #lst <- sapply(str_extract_all(name), function(x) substr(x, 0, 2))
 # view id of your Google Analytics view where 1 conversion = visit
@@ -88,23 +88,21 @@ get_data=function(vid,from,to,dim,met,max){df=google_analytics(
  		dim_filters = fc2,  max = max	,anti_sample = TRUE)
 # clean up and set class
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
-		df$dimension1 = gsub('&quot;Chip&quot;', "\"Chip\"", df$dimension1)
+		df$dimension1 = gsub('&#039;', "'", df$dimension1)
+		df$dimension1 = gsub('&quot;Chip&quot;',  "'Chip'", df$dimension1)
 		df$author_full=df$dimension1
 		df$dimension1 <- NULL
 df}
 gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
+gadata$author_full = gsub("\"Chip\"", "'Chip'", gadata$author_full)
 
 df1 = as.data.frame(gadata)
-names(df1)
+df1=df1[-which(!is.na(as.numeric(df1$author_full))),]
 df1$pageTitle <- gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle)
-df1$pageTitle <- sub(" | .*","",df1$pageTitle)
 
-df1$pageTitle=sub(" | .*", "", df1$pageTitle)
+authurs=as.list(unique(df1$author_full))
 
-
-df1 <- df1[!grepl("search/srpcache", df1$pageTitle),]
-
-save(gadata, file = "Big_Raw_GA_DAT.RData")
+save(df1, file = "Big_Raw_GA_DAT.RData")
 #######
 load( file = "Big_Raw_GA_DAT.RData")
 #######
@@ -120,6 +118,10 @@ df1_2[-1] = lapply(names(df1_2[-1]), function(nm) grepl(nm, df1_2[[1]]))
 df1=cbind(df1_1,df1_2)
 rm(gadata, dim, dimf, dimf2, fc2,ga_id, met, max, vid)
 rm(df1_1,df1_2)
+
+
+
+
 
 #####################################################
 #### Initialize Cleanup of Google Analytics Data ####
@@ -181,6 +183,7 @@ df1$ID <- seq.int(nrow(df1))
 ########################################################
 ############# Match with Cato Sitemap XML ##############
 ########################################################
+#### Split ####
 library(stringdist)
 require(XML)
 library(data.table)
@@ -204,45 +207,8 @@ tagsList <- lapply(tagsList, function(x) as.data.table(as.list(x)))
 # Rbind all the 1-row data.tables into a single data.table
 tags_2 <- rbindlist(tagsList, use.names = T, fill = T)
 tags_2=as.data.frame(tags_2)
-url_list=as.list(rbind(tags_2$loc, tags_2$loc))
-rm(tagsList,tags_2,tags_1,xmlfile,url_2,url_1)
-url_list=as.vector(url_list)
-
-df_int_fail <- subset(df_intermediate, (df_intermediate$title)=="NA")
-#df_int_success <- subset(df_intermediate, (df_intermediate$title)!="NA")
-
-url_vector_dfi=df_int_fail[["pagePath"]]
-url_vector_dfi=as.vector(unique(url_vector_dfi))
-url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
-
-#ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
-ClosestMatch3 = function(string){url_list[amatch(string, url_list, maxDist=40,nomatch=0)]}
-
-#ClosestMatch2(url_vector_dfi, url_list)
-alt_page=pbmclapply(url_vector_dfi, ClosestMatch3)
-
-
-is.na(alt_page) = lengths(alt_page) == 0
-alt_page[lengths(alt_page) == 0] = 0
-alt_page_ <- as.data.frame(alt_page)
-
-alt_page_ <- rbindlist(alt_page_, use.names = T, fill = T)
-match_output=as.data.frame(cbind(url_vector_dfi,((alt_page))))
-match_output$V2=lapply(match_output$V2,unlist)
-match_output$V2=ifelse(match_output$V2=='https://www.cato.org/cato40',NA,match_output$V2)
-
-
-
-
-
-save(df1, file = "Big_Cleaned_DAT.RData")
-#####################################################
-################ Scrape Cato Web Data ############### 
-#####################################################
-load( file = "Big_Cleaned_DAT.RData")
-#### Split ####
-url_vector_full=df1[["pagePath"]]
-url_vector=unique(url_vector_full)
+url_list=as.list(rbind(tags_1$loc, tags_2$loc))
+url_vector=as.vector(url_list)
 split_url_vector = split(url_vector, ceiling(seq_along(url_vector)/5000))
 split_1=split_url_vector[[1]]
 split_2=split_url_vector[[2]]
@@ -257,6 +223,8 @@ split_10=split_url_vector[[10]]
 split_11=split_url_vector[[11]]
 split_12=split_url_vector[[12]]
 split_13=split_url_vector[[13]]
+split_14=split_url_vector[[14]]
+split_15=split_url_vector[[15]]
 
 #### Apply ####
 SafeGet = function (x)	{
@@ -267,11 +235,9 @@ SafeGet = function (x)	{
 	root=xmlRoot(parsed)
 	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
 	return(title)	
-	Sys.sleep(1)},
+	Sys.sleep(.25)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
-# responses_1_1 <- pbmclapply(split_1, SafeGet, mc.preschedule=T)
-# identical(responses_1_1,responses_1)
 responses_1 <- pbmclapply(split_1, SafeGet, mc.preschedule=T)
 responses_2 <- pbmclapply(split_2, SafeGet, mc.preschedule=T)
 responses_3 <- pbmclapply(split_3, SafeGet, mc.preschedule=T)
@@ -285,8 +251,9 @@ responses_10 <- pbmclapply(split_10, SafeGet, mc.preschedule=T)
 responses_11 <- pbmclapply(split_11, SafeGet, mc.preschedule=T)
 responses_12 <- pbmclapply(split_12, SafeGet, mc.preschedule=T)
 responses_13 <- pbmclapply(split_13, SafeGet, mc.preschedule=T)
+responses_14 <- pbmclapply(split_14, SafeGet, mc.preschedule=T)
+responses_15 <- pbmclapply(split_15, SafeGet, mc.preschedule=T)
 
-############# Load and Save #################
 save(responses_1, file = "responses_1.RData")
 save(responses_2, file = "responses_2.RData")
 save(responses_3, file = "responses_3.RData")
@@ -300,7 +267,9 @@ save(responses_10, file = "responses_10.RData")
 save(responses_11, file = "responses_11.RData")
 save(responses_12, file = "responses_12.RData")
 save(responses_13, file = "responses_13.RData")
-# Load
+save(responses_14, file = "responses_14.RData")
+save(responses_15, file = "responses_15.RData")
+
 load(file = "responses_1.RData")
 load(file = "responses_2.RData")
 load(file = "responses_3.RData")
@@ -314,12 +283,49 @@ load(file = "responses_10.RData")
 load(file = "responses_11.RData")
 load(file = "responses_12.RData")
 load(file = "responses_13.RData")
+load(file = "responses_14.RData")
+load(file = "responses_15.RData")
 
 #################### Combine ########################## 
-website_responses=lapply(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
-		responses_8,responses_9,responses_10,responses_11, responses_12,responses_13), as.character)
+website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
+responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14,responses_15))
 is.na(website_responses) = lengths(website_responses) == 0
 website_responses[lengths(website_responses) == 0] = NA
+title=trimws(website_responses)
+link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+
+test <-  link_df[complete.cases(link_df$title), ] 
+test<-link_df[-which((link_df$title == "NA")),]
+
+
+df_int_fail <- subset(df_intermediate, (df_intermediate$title)=="NA")
+#df_int_success <- subset(df_intermediate, (df_intermediate$title)!="NA")
+
+url_vector_dfi=df_int_fail[["pagePath"]]
+url_vector_dfi=as.vector(unique(url_vector_dfi))
+url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
+
+#ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
+ClosestMatch3 = function(string){url_list[amatch(string, url_list, maxDist=40,nomatch=0)]}
+
+#ClosestMatch2(url_vector_dfi, url_list)
+alt_page=pbmclapply(url_vector_dfi, ClosestMatch3)
+
+is.na(alt_page) = lengths(alt_page) == 0
+alt_page[lengths(alt_page) == 0] = 0
+alt_page_ <- as.data.frame(alt_page)
+
+alt_page_ <- rbindlist(alt_page_, use.names = T, fill = T)
+match_output=as.data.frame(cbind(url_vector_dfi,((alt_page))))
+match_output$V2=lapply(match_output$V2,unlist)
+match_output$V2=ifelse(match_output$V2=='https://www.cato.org/cato40',NA,match_output$V2)
+
+save(df1, file = "Big_Cleaned_DAT.RData")
+
+############# Load and Save #################
+save(link_df, file = "sitemap.RData")
+# Load
+#load(file = "responses_1.RData")
 
 title=trimws(website_responses)
 link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
@@ -335,8 +341,12 @@ load( file = "Big_Title_Vector.RData")
 load( file = "Big_LinkedTitle.RData")
 linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
-
 save(df_intermediate, file = "df_intermediate.RData")
+#####################################################
+################ Scrape Cato Web Data ############### 
+#####################################################
+
+
 ########################################################
 ############# Recieve additional web data ##############
 ########################################################
