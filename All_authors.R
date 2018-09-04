@@ -1,10 +1,5 @@
 # Google Analytics
 setwd("~/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)")
-# Fonts
-library(extrafont)
-font_import()
-loadfonts()
-getwd()
 # My Packages
 library(googleAnalyticsR)
 library(tidyverse)
@@ -119,10 +114,6 @@ df1=cbind(df1_1,df1_2)
 rm(gadata, dim, dimf, dimf2, fc2,ga_id, met, max, vid)
 rm(df1_1,df1_2)
 
-
-
-
-
 #####################################################
 #### Initialize Cleanup of Google Analytics Data ####
 #####################################################
@@ -149,6 +140,7 @@ df1 <- df1[!grepl("ow.ly", df1$pagePath),]
 df1 <- df1[!grepl("searchenginereports.net", df1$pagePath),]
 df1 <- df1[!grepl("xitenow", df1$pagePath),]
 df1 <- df1[!grepl("cato.us1.list-manage.com/track/click", df1$pagePath),]
+
 # More Reshaping of Page Paths & Remove Trailing Strings #
 df1$pagePath2= gsub(".*www.cato.org", "www.cato.org", df1$pagePath)
 df1$pagePath2= gsub(pattern="[?].*","",x=df1$pagePath2)
@@ -185,7 +177,8 @@ df1$ID <- seq.int(nrow(df1))
 ########################################################
 #### Split ####
 library(stringdist)
-require(XML)
+library(xml2)
+library(XML)
 library(data.table)
 url_1=download_xml('https://www.cato.org/sitemap.xml?page=1')
 url_2=download_xml('https://www.cato.org/sitemap.xml?page=2')
@@ -238,6 +231,7 @@ SafeGet = function (x)	{
 	Sys.sleep(.25)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
+#### Response List ####
 responses_1 <- pbmclapply(split_1, SafeGet, mc.preschedule=T)
 responses_2 <- pbmclapply(split_2, SafeGet, mc.preschedule=T)
 responses_3 <- pbmclapply(split_3, SafeGet, mc.preschedule=T)
@@ -270,6 +264,8 @@ save(responses_13, file = "responses_13.RData")
 save(responses_14, file = "responses_14.RData")
 save(responses_15, file = "responses_15.RData")
 
+#################### Combine ########################## 
+
 load(file = "responses_1.RData")
 load(file = "responses_2.RData")
 load(file = "responses_3.RData")
@@ -286,27 +282,24 @@ load(file = "responses_13.RData")
 load(file = "responses_14.RData")
 load(file = "responses_15.RData")
 
-#################### Combine ########################## 
+load( file = "df_intermediate.RData")
+df_intermediate=df_intermediate[(df_intermediate$title)!='NA',]
+
 website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
 responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14,responses_15))
 is.na(website_responses) = lengths(website_responses) == 0
 website_responses[lengths(website_responses) == 0] = NA
 title=trimws(website_responses)
-link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+link_title_df=subset(link_title_df, (link_title_df$title)!="NA")
 
-test <-  link_df[complete.cases(link_df$title), ] 
-test<-link_df[-which((link_df$title == "NA")),]
+df_int_success <- subset(df_intermediate, (df_intermediate$title)!="NA")
 
-
-df_int_fail <- subset(df_intermediate, (df_intermediate$title)=="NA")
-#df_int_success <- subset(df_intermediate, (df_intermediate$title)!="NA")
-
-url_vector_dfi=df_int_fail[["pagePath"]]
+url_vector_dfi=df_int_success[["pagePath"]]
 url_vector_dfi=as.vector(unique(url_vector_dfi))
-url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
 
 #ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
-ClosestMatch3 = function(string){url_list[amatch(string, url_list, maxDist=40,nomatch=0)]}
+ClosestMatch3 = function(string){url_vector[amatch(string, url_vector, maxDist=40,nomatch=0)]}
 
 #ClosestMatch2(url_vector_dfi, url_list)
 alt_page=pbmclapply(url_vector_dfi, ClosestMatch3)
@@ -320,13 +313,11 @@ match_output=as.data.frame(cbind(url_vector_dfi,((alt_page))))
 match_output$V2=lapply(match_output$V2,unlist)
 match_output$V2=ifelse(match_output$V2=='https://www.cato.org/cato40',NA,match_output$V2)
 
-save(df1, file = "Big_Cleaned_DAT.RData")
+#save(df1, file = "Big_Cleaned_DAT.RData")
+# load(file = "Big_Cleaned_DAT.RData")
 
 ############# Load and Save #################
-save(link_df, file = "sitemap.RData")
 # Load
-#load(file = "responses_1.RData")
-
 title=trimws(website_responses)
 link_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 link_df_full=as.data.frame(cbind(pagePath=url_vector_full))
@@ -334,6 +325,7 @@ linked_title= merge(link_df_full, link_df, by=('pagePath'), all.x=T)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
 ############# Save Split-Apply-Combine #################
+save(link_df, file = "sitemap.RData")
 save(title, file = "Big_Title_Vector.RData")
 save(linked_title, file = "Big_LinkedTitle.RData")
 
@@ -341,24 +333,28 @@ load( file = "Big_Title_Vector.RData")
 load( file = "Big_LinkedTitle.RData")
 linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+
 save(df_intermediate, file = "df_intermediate.RData")
 #####################################################
 ################ Scrape Cato Web Data ############### 
 #####################################################
+ClosestMatch = function(string){url_list[amatch(string, url_list, maxDist=40,nomatch=0)]}
 
+title_vector_dfi=df_intermediate[["title"]]
 
-########################################################
-############# Recieve additional web data ##############
-########################################################
-load( file = "df_intermediate.RData")
+url_vector_dfi=as.vector(unique(url_vector_dfi))
+url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
 
-type_list <- pbmclapply(url_vector, function(url){
+#ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
+url_list = df_intermediate$pagePath
+
+type_list <- pbmclapply(url_list, function(url){
 																type = gsub('www.cato.org*/|/.*', "\\1", url)
 																type = gsub('-', " ", type)
 																type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
 																type_2 = gsub('-', " ", type_2)
-																type=ifelse((type=="publications"), type_2, type)
-})
+																type=ifelse((type=="publications"), type_2, type)})
+
 type_df=data.frame(cbind(type=type_list))
 type_df=as.data.frame(cbind(type=type_list, pagePath=url_vector))
 type_df_full=as.data.frame(cbind(pagePath=url_vector_full))

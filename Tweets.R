@@ -152,14 +152,15 @@ str(tweets.dataframe)
 
 txt=tweets.dataframe$tweet[i]
 
-pol = 	lapply(tweets.dataframe$tweet, function(i) {txt=tweets.dataframe$tweet[i]
+pol = 	lapply(tweets.dataframe$tweet, function(i) {
+	txt=tweets.dataframe$tweet[i]
 	# strip sentence enders so each tweet is analyzed as a sentence,
 	# and +'s which muck up regex
 	txt=gsub('(\\.|!|\\?)\\s+|(\\++)', ' ', txt)
 		# strip URLs
-		txt=gsub(' http[^[:blank:]]+', '', txt)
+	txt=gsub(' http[^[:blank:]]+', '', txt)
 		# calculate polarity
-		syuzhet_vector <- get_sentiment(txt, method="syuzhet")})
+	syuzhet_vector <- get_sentiment(txt, method="syuzhet")})
 
 unique(pol)
 
