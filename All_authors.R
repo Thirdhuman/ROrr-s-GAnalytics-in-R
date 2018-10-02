@@ -25,18 +25,15 @@ current_date=as.Date(current_date)
 # Open Google Analytics
 account_list <- ga_account_list()
 ga_id <- account_list$viewId[1]
-cato_scholars=read.xlsx('Cato_Scholars.xlsx')
 
 # Choose person(s) of interest
-targets = cato_scholars %>% filter(str_detect(name.website, 'Vanessa'))
+
+cato_scholars=read.xlsx('Cato_Scholars.xlsx')
+#targets = cato_scholars %>% filter(str_detect(name.website, 'Vanessa'))
 name=targets$name.website
 name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
 
-authur_row=as.data.frame(cato_scholars$name.website)
-colnames(authur_row) = authur_row[1, ] # the first row will be the header
-authur_row = authur_row[-1, ]          # removing the first row.
-authur_row=as.vector(as.character(authur_row))
 
 # Establish date range
 from <- "2014-07-01" # (Earliest Available)
@@ -94,17 +91,21 @@ gadata$author_full = gsub("\"Chip\"", "'Chip'", gadata$author_full)
 df1 = as.data.frame(gadata)
 df1=df1[-which(!is.na(as.numeric(df1$author_full))),]
 df1$pageTitle <- gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle)
-
 authurs=as.list(unique(df1$author_full))
-
 save(df1, file = "Big_Raw_GA_DAT.RData")
 #######
 load( file = "Big_Raw_GA_DAT.RData")
 #######
 df1 = as.data.frame(gadata)
-df1[as.character(authur_row)] = NA
+# Generate vector to create column for each author
+authur_row=as.data.frame(cato_scholars$name.website)
+colnames(authur_row) = authur_row[1, ] # the first row will be the header
+authur_row = authur_row[-1, ]          # removing the first row.
+authur_row=as.vector(as.character(authur_row))
 
-### Stop here if column #s are altered since previous analysis ###
+df1[as.character(authur_row)] = NA
+####################################################################
+### Stop here if column #s are altered since previous analysis!! ###
 colnames(df1)
 df1$ID=NULL
 df1_1=df1[ ,1:8]
@@ -170,8 +171,8 @@ df1 <- df1[, c(refcols, setdiff(names(df1), refcols))]
 df1$pagePath1=df1$pagePath
 df1$pagePath=df1$pagePath2
 df1$pagePath2=NULL
-df1$ID <- seq.int(nrow(df1))
-
+rm(refcols)
+save(df1, file = "df1.RData")
 ########################################################
 ############# Match with Cato Sitemap XML ##############
 ########################################################
@@ -200,8 +201,21 @@ tagsList <- lapply(tagsList, function(x) as.data.table(as.list(x)))
 # Rbind all the 1-row data.tables into a single data.table
 tags_2 <- rbindlist(tagsList, use.names = T, fill = T)
 tags_2=as.data.frame(tags_2)
-url_list=as.list(rbind(tags_1$loc, tags_2$loc))
-url_vector=as.vector(url_list)
+url_vector=as.list(rbind(tags_1$loc, tags_2$loc))
+url_vector=as.vector(url_vector)
+
+#### Apply & Save ####
+SafeGet = function (x)	{
+	tryCatch({
+	#	short_url_vector
+	html=GET(x)
+	parsed=htmlParse(html)
+	root=xmlRoot(parsed)
+	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
+	return(title)	
+	Sys.sleep(.01)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
+
 split_url_vector = split(url_vector, ceiling(seq_along(url_vector)/5000))
 split_1=split_url_vector[[1]]
 split_2=split_url_vector[[2]]
@@ -219,49 +233,35 @@ split_13=split_url_vector[[13]]
 split_14=split_url_vector[[14]]
 split_15=split_url_vector[[15]]
 
-#### Apply ####
-SafeGet = function (x)	{
-	tryCatch({
-	#	short_url_vector
-	html=GET(x)
-	parsed=htmlParse(html)
-	root=xmlRoot(parsed)
-	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
-	return(title)	
-	Sys.sleep(.25)},
-	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
-
-#### Response List ####
 responses_1 <- pbmclapply(split_1, SafeGet, mc.preschedule=T)
-responses_2 <- pbmclapply(split_2, SafeGet, mc.preschedule=T)
-responses_3 <- pbmclapply(split_3, SafeGet, mc.preschedule=T)
-responses_4 <- pbmclapply(split_4, SafeGet, mc.preschedule=T)
-responses_5 <- pbmclapply(split_5, SafeGet, mc.preschedule=T)
-responses_6 <- pbmclapply(split_6, SafeGet, mc.preschedule=T)
-responses_7 <- pbmclapply(split_7, SafeGet, mc.preschedule=T)
-responses_8 <- pbmclapply(split_8, SafeGet, mc.preschedule=T)
-responses_9 <- pbmclapply(split_9, SafeGet, mc.preschedule=T)
-responses_10 <- pbmclapply(split_10, SafeGet, mc.preschedule=T)
-responses_11 <- pbmclapply(split_11, SafeGet, mc.preschedule=T)
-responses_12 <- pbmclapply(split_12, SafeGet, mc.preschedule=T)
-responses_13 <- pbmclapply(split_13, SafeGet, mc.preschedule=T)
-responses_14 <- pbmclapply(split_14, SafeGet, mc.preschedule=T)
-responses_15 <- pbmclapply(split_15, SafeGet, mc.preschedule=T)
-
 save(responses_1, file = "responses_1.RData")
+responses_2 <- pbmclapply(split_2, SafeGet, mc.preschedule=T)
 save(responses_2, file = "responses_2.RData")
+responses_3 <- pbmclapply(split_3, SafeGet, mc.preschedule=T)
 save(responses_3, file = "responses_3.RData")
+responses_4 <- pbmclapply(split_4, SafeGet, mc.preschedule=T)
 save(responses_4, file = "responses_4.RData")
+responses_5 <- pbmclapply(split_5, SafeGet, mc.preschedule=T)
 save(responses_5, file = "responses_5.RData")
+responses_6 <- pbmclapply(split_6, SafeGet, mc.preschedule=T)
 save(responses_6, file = "responses_6.RData")
+responses_7 <- pbmclapply(split_7, SafeGet, mc.preschedule=T)
 save(responses_7, file = "responses_7.RData")
+responses_8 <- pbmclapply(split_8, SafeGet, mc.preschedule=T)
 save(responses_8, file = "responses_8.RData")
+responses_9 <- pbmclapply(split_9, SafeGet, mc.preschedule=T)
 save(responses_9, file = "responses_9.RData")
+responses_10 <- pbmclapply(split_10, SafeGet, mc.preschedule=T)
 save(responses_10, file = "responses_10.RData")
+responses_11 <- pbmclapply(split_11, SafeGet, mc.preschedule=T)
 save(responses_11, file = "responses_11.RData")
+responses_12 <- pbmclapply(split_12, SafeGet, mc.preschedule=T)
 save(responses_12, file = "responses_12.RData")
+responses_13 <- pbmclapply(split_13, SafeGet, mc.preschedule=T)
 save(responses_13, file = "responses_13.RData")
+responses_14 <- pbmclapply(split_14, SafeGet, mc.preschedule=T)
 save(responses_14, file = "responses_14.RData")
+responses_15 <- pbmclapply(split_15, SafeGet, mc.preschedule=T)
 save(responses_15, file = "responses_15.RData")
 
 #################### Combine ########################## 
@@ -282,27 +282,46 @@ load(file = "responses_13.RData")
 load(file = "responses_14.RData")
 load(file = "responses_15.RData")
 
-load( file = "df_intermediate.RData")
-df_intermediate=df_intermediate[(df_intermediate$title)!='NA',]
-
 website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
 responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14,responses_15))
-is.na(website_responses) = lengths(website_responses) == 0
-website_responses[lengths(website_responses) == 0] = NA
+
+rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
+responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14,responses_15)
+
 title=trimws(website_responses)
 link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
-link_title_df=subset(link_title_df, (link_title_df$title)!="NA")
+save(link_title_df, file = "link_title_df.RData")
 
-df_int_success <- subset(df_intermediate, (df_intermediate$title)!="NA")
+# Load
+load(file = "responses_15.RData")
+is.na(link_title_df) = lengths(link_title_df) == 0
+link_title_df[lengths(link_title_df) == 0] = NA
+link_title_df=subset(link_title_df, (link_title_df$title)!='NA')
+title_list<-link_title_df[["title"]]
+url_list=link_title_df[["pagePath"]]
 
-url_vector_dfi=df_int_success[["pagePath"]]
+
+rm(url_1,url_2, tags_1, tags_2, xmlfile, tagsList, title, website_responses)
+df_intermediate = merge(df1, link_title_df, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+
+save(df_intermediate, file = "df_intermediate.RData")
+############# Save Split-Apply-Combine #################
+
+
+link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+
+df_intermediate=df_intermediate[(df_intermediate$title)!='NA',]
+url_vector_dfi=df_intermediate[["pagePath"]]
 url_vector_dfi=as.vector(unique(url_vector_dfi))
 
-#ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
-ClosestMatch3 = function(string){url_vector[amatch(string, url_vector, maxDist=40,nomatch=0)]}
+title_vector_dfi=df_intermediate[["title"]]
+title_vector_dfi=as.vector(unique(title_vector_dfi))
+
+ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
+ClosestMatch3 = function(string){url_vector[amatch(string, url_list, maxDist=40,nomatch=0)]}
 
 #ClosestMatch2(url_vector_dfi, url_list)
-alt_page=pbmclapply(url_vector_dfi, ClosestMatch3)
+alt_page=pbmclapply(url_vector_dfi, ClosestMatch2)
 
 is.na(alt_page) = lengths(alt_page) == 0
 alt_page[lengths(alt_page) == 0] = 0
@@ -314,7 +333,7 @@ match_output$V2=lapply(match_output$V2,unlist)
 match_output$V2=ifelse(match_output$V2=='https://www.cato.org/cato40',NA,match_output$V2)
 
 #save(df1, file = "Big_Cleaned_DAT.RData")
-# load(file = "Big_Cleaned_DAT.RData")
+load(file = "Big_Cleaned_DAT.RData")
 
 ############# Load and Save #################
 # Load
