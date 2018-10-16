@@ -28,7 +28,6 @@ api.url= paste0("https://api.twitter.com/1.1/lists/members.json?slug=",twlist,"&
 response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
 load( file = "NAME_SAMPLE.RData")
 #cato-twitter-feeds
-
 scholars=read.csv('Cato_Scholars.csv')
 
 ClosestMatch2 =  function(string, stringVector){
@@ -44,13 +43,6 @@ scholars$name.website=website.names
 scholars=as.data.frame(scholars)
 as.data.frame()
 df1$author_full
-
-
-website.names
-
-ClosestMatch2(name, scholars$users.names)
-
-
 
 response.list <- fromJSON(content(response, as = "text", encoding = "UTF-8"))
 users.names <- sapply(response.list$users, function(i) i$name)

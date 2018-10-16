@@ -25,15 +25,11 @@ current_date=as.Date(current_date)
 # Open Google Analytics
 account_list <- ga_account_list()
 ga_id <- account_list$viewId[1]
-
 # Choose person(s) of interest
-
 cato_scholars=read.xlsx('Cato_Scholars.xlsx')
 #targets = cato_scholars %>% filter(str_detect(name.website, 'Vanessa'))
-name=targets$name.website
-name=as.character(name)
+name=targets$name.website;name=as.character(name)
 last_name=str_extract(name,'[^ ]+$')
-
 
 # Establish date range
 from <- "2014-07-01" # (Earliest Available)
@@ -43,15 +39,12 @@ to   <- as.character(current_date)
 dimf <- dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
 dimf2 <- dim_filter("countryIsoCode","EXACT","US",not = F)
 fc2 <- filter_clause_ga4(list(# dimf #,dimf2
-																														), operator = "OR")
+			), operator = "OR")
 
 #### Construct File Name ####
-from_s = (from)
-from_m = as.character(from)
-from_y=str_sub(from, start=3, end = 4)
-from_m=str_sub(from, start=6, end = 7)
-to_y=str_sub(to, start=3, end = 4)
-to_m=str_sub(to, start=6, end = 7)
+from_s = (from);from_m = as.character(from)
+from_y=str_sub(from, start=3, end = 4);from_m=str_sub(from, start=6, end = 7)
+to_y=str_sub(to, start=3, end = 4);to_m=str_sub(to, start=6, end = 7)
 analysis_range=paste0("(",from_m,from_y,'-',to_m,to_y,")")
 initials <- function(a, b){
 	a <- str_split(a, "&")
@@ -64,12 +57,12 @@ analysis_identifier=initials(name,analysis_range)
 #### Specify Search terms ####
 max = 500000000
 met = c("sessions", #"pageviews",
-								'timeOnPage','avgTimeOnPage',
-								"entrances","bounces", 'exitRate')
+	'timeOnPage','avgTimeOnPage',
+	"entrances","bounces", 'exitRate')
 dim = c("date", 'pageTitle',
-								"ga:dimension1", #'channelGrouping',# 'city', 'region',
-								#'ga:dimension2', 
-								'pagePath')
+	"ga:dimension1", #'channelGrouping',# 'city', 'region',
+	#'ga:dimension2', 
+	'pagePath')
 
 #lst <- sapply(str_extract_all(name), function(x) substr(x, 0, 2))
 # view id of your Google Analytics view where 1 conversion = visit
@@ -266,21 +259,7 @@ save(responses_15, file = "responses_15.RData")
 
 #################### Combine ########################## 
 
-load(file = "responses_1.RData")
-load(file = "responses_2.RData")
-load(file = "responses_3.RData")
-load(file = "responses_4.RData")
-load(file = "responses_5.RData")
-load(file = "responses_6.RData")
-load(file = "responses_7.RData")
-load(file = "responses_8.RData")
-load(file = "responses_9.RData")
-load(file = "responses_10.RData")
-load(file = "responses_11.RData")
-load(file = "responses_12.RData")
-load(file = "responses_13.RData")
-load(file = "responses_14.RData")
-load(file = "responses_15.RData")
+load(file = "responses_1.RData");load(file = "responses_2.RData");load(file = "responses_3.RData");load(file = "responses_4.RData");load(file = "responses_5.RData");load(file = "responses_6.RData");load(file = "responses_7.RData");load(file = "responses_8.RData");load(file = "responses_9.RData");load(file = "responses_10.RData");load(file = "responses_11.RData");load(file = "responses_12.RData");load(file = "responses_13.RData");load(file = "responses_14.RData");load(file = "responses_15.RData")
 
 website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,
 responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14,responses_15))
@@ -293,13 +272,12 @@ link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 save(link_title_df, file = "link_title_df.RData")
 
 # Load
-load(file = "responses_15.RData")
+load(file = "link_title_df.RData")
 is.na(link_title_df) = lengths(link_title_df) == 0
 link_title_df[lengths(link_title_df) == 0] = NA
 link_title_df=subset(link_title_df, (link_title_df$title)!='NA')
 title_list<-link_title_df[["title"]]
 url_list=link_title_df[["pagePath"]]
-
 
 rm(url_1,url_2, tags_1, tags_2, xmlfile, tagsList, title, website_responses)
 df_intermediate = merge(df1, link_title_df, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
@@ -367,12 +345,11 @@ url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
 #ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
 url_list = df_intermediate$pagePath
 
-type_list <- pbmclapply(url_list, function(url){
-																type = gsub('www.cato.org*/|/.*', "\\1", url)
-																type = gsub('-', " ", type)
-																type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
-																type_2 = gsub('-', " ", type_2)
-																type=ifelse((type=="publications"), type_2, type)})
+type_list <- pbmclapply(url_list, function(url){type = gsub('www.cato.org*/|/.*', "\\1", url)
+type = gsub('-', " ", type)
+type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
+type_2 = gsub('-', " ", type_2)
+type=ifelse((type=="publications"), type_2, type)})
 
 type_df=data.frame(cbind(type=type_list))
 type_df=as.data.frame(cbind(type=type_list, pagePath=url_vector))
