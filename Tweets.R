@@ -1,5 +1,4 @@
 # Twitter Scraping
-
 library(rjson)
 library(twitteR)
 library(ROAuth)
