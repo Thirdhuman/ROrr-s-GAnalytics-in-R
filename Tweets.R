@@ -1,33 +1,17 @@
 # Twitter Scraping
-library(rjson)
-library(twitteR)
-library(ROAuth)
-library(httr)
-library(XML)
-library(anytime)
-library(syuzhet)
-ClosestMatch2 =  function(string, stringVector){
-  stringVector[amatch(string, stringVector, maxDist=Inf)]}
-
-#library(reticulate)
-#os <- import("os")
+library(rjson);library(twitteR);library(ROAuth);library(httr);library(XML);library(anytime);library(syuzhet)
 
 # Set API Keys
 access_token   =   '3705111012-0ZSGhm0Y5XDkptTYfecD8TwXoJTepfQ6fgtkUX2'
 access_token_secret  =  'i3EaK25UsGsHvnhJzvyLxTnVOAMusH5giu0oOKf3Y0pJY'
 consumer_key = 'kI3TDGtYDpdN5mPWVtZg4E74L'
 consumer_secret  = 'Lk9upIVEm5BsiQq1o3KalWDWLxHL2hFnRlzwDJAkIGnSUvkr6Y'
-
 setup_twitter_oauth(consumer_key, consumer_secret,access_token, access_token_secret)
-
-cato_feeds= 'cato-twitter-feeds'
-twlist= "cato-policy-scholars"
-twowner= "CatoInstitute"
+cato_feeds= 'cato-twitter-feeds';twlist= "cato-policy-scholars";twowner= "CatoInstitute"
 api.url= paste0("https://api.twitter.com/1.1/lists/members.json?slug=",twlist,"&owner_screen_name=",twowner,"&count=5000")
 response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
 load( file = "NAME_SAMPLE.RData")
 #cato-twitter-feeds
-scholars=read.csv('Cato_Scholars.csv')
 
 ClosestMatch2 =  function(string, stringVector){
   stringVector[amatch(string, stringVector, maxDist=Inf)]}
@@ -35,8 +19,7 @@ ClosestMatch2 =  function(string, stringVector){
 website.names = list()
 for(i in seq_along(scholars$users.names)){
 	temp=scholars$users.names[i]
-	website.names[i] = ClosestMatch2(temp, df1$author_full) 
-}
+	website.names[i] = ClosestMatch2(temp, df1$author_full) }
 
 scholars$name.website=website.names
 scholars=as.data.frame(scholars)
@@ -64,20 +47,15 @@ scholars=as.data.frame(scholars)
 i <- sapply(scholars, is.factor)
 scholars[i] <- lapply(scholars[i], as.character)
 scholars$name.website=unlist(scholars$name.website)
-scholars$title_category_1 = NA
-scholars$category_1 = NA
-scholars$title_category_2 = NA
-scholars$category_2 = NA
-scholarstitle_category_3 = NA
-scholars$category_3 = NA
-scholars$title_category_4 = NA
-scholars$category_4 = NA
-scholars$title_category_5 = NA
-scholars$category_5 = NA
-
-str(scholars)
+scholars$title_category_1 = NA;scholars$category_1 = NA
+scholars$title_category_2 = NA;scholars$category_2 = NA
+scholarstitle_category_3 = NA;scholars$category_3 = NA
+scholars$title_category_4 = NA;scholars$category_4 = NA
+scholars$title_category_5 = NA;scholars$category_5 = NA
 write.csv(scholars, "Cato_Scholars.csv")
-
+detach(rjson);detach(twitteR);detach(ROAuth);detach(httr);detach(XML);detach(anytime);detach(syuzhet)
+#### End Twitter Data  #### 
+scholars=read.csv('Cato_Scholars.csv')
 
 tweets.dataframe = data.frame()
 tweet_df = data.frame()

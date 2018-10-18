@@ -78,18 +78,73 @@ get_data=function(vid,from,to,dim,met,max){df=google_analytics(
 		df$author_full=df$dimension1
 		df$dimension1 <- NULL
 df}
-gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max)
-gadata$author_full = gsub("\"Chip\"", "'Chip'", gadata$author_full)
-
-df1 = as.data.frame(gadata)
-df1=df1[-which(!is.na(as.numeric(df1$author_full))),]
-df1$pageTitle <- gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle)
-authurs=as.list(unique(df1$author_full))
+gadata=get_data(vid=vid, from=from, to=to, dim=dim, met=met, max=max) # Run Download function
+df1 = as.data.frame(gadata) # Convert to dataframe
+df1=df1[-which(!is.na(as.numeric(df1$author_full))),] # Clean author names pt.1
+df1$pageTitle <- gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle) # Clean author names pt.2
 save(df1, file = "Big_Raw_GA_DAT.RData")
 #######
 load( file = "Big_Raw_GA_DAT.RData")
-#######
-df1 = as.data.frame(gadata)
+#### Twitter Block Only: Run If Necessary ####
+authurs=as.list(unique(df1$author_full))
+save(authurs, file = "NAME_SAMPLE.RData")
+library(rjson);library(twitteR);library(ROAuth);library(httr);library(XML);library(anytime);library(syuzhet)
+# Set API Keys
+access_token   =  '3705111012-0ZSGhm0Y5XDkptTYfecD8TwXoJTepfQ6fgtkUX2'
+access_token_secret  = 'i3EaK25UsGsHvnhJzvyLxTnVOAMusH5giu0oOKf3Y0pJY'
+consumer_key = 'kI3TDGtYDpdN5mPWVtZg4E74L'
+consumer_secret  = 'Lk9upIVEm5BsiQq1o3KalWDWLxHL2hFnRlzwDJAkIGnSUvkr6Y'
+setup_twitter_oauth(consumer_key, consumer_secret,access_token, access_token_secret)
+cato_feeds= 'cato-twitter-feeds';twlist= "cato-policy-scholars";twowner= "CatoInstitute"
+api.url= paste0("https://api.twitter.com/1.1/lists/members.json?slug=",twlist,"&owner_screen_name=",twowner,"&count=5000")
+response <- GET(api.url, config(token=twitteR:::get_oauth_sig()))
+load( file = "NAME_SAMPLE.RData")
+#cato-twitter-feeds
+scholars=read.csv('Cato_Scholars.csv')
+
+ClosestMatch2 =  function(string, stringVector){
+  stringVector[amatch(string, stringVector, maxDist=Inf)]}
+
+website.names = list()
+for(i in seq_along(scholars$users.names)){
+	temp=scholars$users.names[i]
+	website.names[i] = ClosestMatch2(temp, df1$author_full) }
+
+scholars$name.website=website.names
+scholars=as.data.frame(scholars)
+as.data.frame()
+df1$author_full
+
+response.list <- fromJSON(content(response, as = "text", encoding = "UTF-8"))
+users.names <- sapply(response.list$users, function(i) i$name)
+users.screennames <- sapply(response.list$users, function(i) i$screen_name)
+users.IDs <- sapply(response.list$users, function(i) i$id_str)
+faves <- sapply(response.list$users, function(i) i$favourites_count)
+followers <- sapply(response.list$users, function(i) i$followers_count)
+date_created <- sapply(response.list$users, function(i) i$created_at)
+cato_twitter=cbind(users.names,date_created,users.screennames,users.IDs,faves,followers)
+scholars=as.data.frame(cato_twitter)
+names(scholars)[names(scholars) == 'users.names'] ='name.twitter'
+names(scholars)[names(scholars) == 'users.IDs'] ='ID.twitter'
+names(scholars)[names(scholars) == 'users.screennames'] ='handle.twitter'
+website.names = list()
+for(i in seq_along(scholars$name.twitter)){temp=scholars$name.twitter[i]
+	website.names[i] = ClosestMatch2(temp, name_sample$author_full) }
+scholars$name.website=website.names
+scholars=as.data.frame(scholars)
+i <- sapply(scholars, is.factor)
+scholars[i] <- lapply(scholars[i], as.character)
+scholars$name.website=unlist(scholars$name.website)
+scholars$title_category_1 = NA;scholars$category_1 = NA
+scholars$title_category_2 = NA;scholars$category_2 = NA
+scholarstitle_category_3 = NA;scholars$category_3 = NA
+scholars$title_category_4 = NA;scholars$category_4 = NA
+scholars$title_category_5 = NA;scholars$category_5 = NA
+
+write.csv(scholars, "Cato_Scholars.csv")
+detach(rjson);detach(twitteR);detach(ROAuth);detach(httr);detach(XML);detach(anytime);detach(syuzhet)
+
+
 # Generate vector to create column for each author
 authur_row=as.data.frame(cato_scholars$name.website)
 colnames(authur_row) = authur_row[1, ] # the first row will be the header

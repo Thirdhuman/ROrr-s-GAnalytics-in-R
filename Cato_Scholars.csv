@@ -1,2 +1,55 @@
-"","X","name.twitter","date_created","handle.twitter","ID.twitter","faves","followers","name.website","title_category_1","category_1","title_category_2","category_2","category_3","title_category_4","category_4","title_category_5","category_5"
-"1",1,"Jay Schweikert","Tue Mar 06 17:42:07 +0000 2018","jay_schweikert",971078486495514624,290,186,"Jay Schweikert",
+"","name.twitter","date_created","handle.twitter","ID.twitter","faves","followers","name.website","title_category_1","category_1","title_category_2","category_2","title_category_3","category_3","title_category_4","category_4","title_category_5","category_5"
+"1","Jay Schweikert","Tue Mar 06 17:42:07 +0000 2018","jay_schweikert","971078486495514624","1191","353","Jay Schweikert",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"2","Jeffrey A. Singer","Sat Oct 15 21:07:19 +0000 2016","dr4liberty","787399476763693056","496","661","Jeffrey A. Singer",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"3","Caroline Dorminey","Sun Nov 22 17:10:38 +0000 2015","CDDorminey","4251109120","734","397","Caroline Dorminey",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"4","Eric Gomez","Wed Oct 22 02:07:47 +0000 2014","EricGomezAsia","2869981741","5591","1137","Eric Gomez",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"5","John Samples","Fri Oct 31 19:50:05 +0000 2014","SamplesAtCato","2853670545","0","27","John Samples",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"6","Emma Ashford","Wed Sep 03 20:36:04 +0000 2014","EmmaMAshford","2788547730","3719","6210","Emma Ashford",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"7","Dan Pearson","Wed Feb 19 16:51:44 +0000 2014","DPearson_mn","2351966168","30","668","Daniel R. Pearson",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"8","Clark Neily","Tue Jul 30 18:35:13 +0000 2013","ConLawWarrior","1633579489","7525","5034","Clark Neily",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"9","Roger Pilon","Wed Mar 27 20:23:25 +0000 2013","Roger_Pilon","1308527071","64","1335","Roger Pilon",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"10","Corey A. DeAngelis","Sun Mar 17 22:22:57 +0000 2013","DeAngelisCorey","1276140426","16945","1685","Corey A. DeAngelis",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"11","Chris Edwards","Mon Feb 11 17:10:56 +0000 2013","CatoEdwards","1169477054","452","1378","Chris Edwards",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"12","Prof. Steve Hanke","Fri Oct 05 19:10:03 +0000 2012","steve_hanke","863527548","7057","98331","Dr. Steve Davies",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"13","AlanReynoldsEcon","Wed Aug 29 23:08:55 +0000 2012","AlanReynoldsEcn","790330998","318","1637","Alan Reynolds",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"14","vanessa brown calder","Mon Aug 06 17:40:21 +0000 2012","vanessabcalder","741082314","2598","1179","Vanessa Brown Calder",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"15","Simon Lester","Wed Jul 25 19:09:22 +0000 2012","snlester","716589799","6877","6221","Simon Lester",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"16","Diego Zuluaga","Tue Jan 17 18:25:00 +0000 2012","DiegoZuluagaL","466718156","1122","1128","Diego Zuluaga",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"17","Patrick J. Michaels","Thu Oct 20 18:13:44 +0000 2011","CatoMichaels","394838208","1","1949","Patrick J. Michaels",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"18","George Selgin","Tue Jul 26 23:10:15 +0000 2011","GeorgeSelgin","343019754","722","3375","George Selgin",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"19","Michael Tanner","Thu Jul 21 17:06:37 +0000 2011","MTannerCato","339782439","503","4442","Michael D. Tanner",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"20","Johan Norberg","Tue Jun 07 08:56:44 +0000 2011","johanknorberg","312544868","1084","37579","Johan Norberg",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"21","Neal McCluskey","Thu Jun 02 15:56:39 +0000 2011","NealMcCluskey","309740877","1632","4545","Neal McCluskey",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"22","Ryan Bourne","Thu May 12 13:01:52 +0000 2011","MrRBourne","297395484","1600","10161","Ryan Bourne",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"23","David Bier","Mon May 09 14:51:25 +0000 2011","David_J_Bier","295711337","7083","6534","David Bier",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"24","Mustafa Akyol","Mon May 09 01:01:02 +0000 2011","AkyolinEnglish","295431169","1905","40410","Mustafa Akyol",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"25","Patrick Eddington","Thu Aug 19 02:00:26 +0000 2010","PGEddington","180202188","1912","2514","Patrick G. Eddington",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"26","Jason Kuznicki","Fri Jul 23 16:52:26 +0000 2010","JasonKuznicki","169974430","6178","5532","Jason Kuznicki",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"27","John Glaser","Sat Jun 05 02:47:27 +0000 2010","jwcglaser","152103928","5240","3871","John Glaser",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"28","Swaminomics","Wed Dec 30 00:55:13 +0000 2009","swaminomics","100363256","0","27674","Dan Lips",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"29","Scott Lincicome","Tue Dec 29 15:34:32 +0000 2009","scottlincicome","100250921","201153","31293","Scott Lincicome",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"30","(((The Alex Nowrasteh)))","Thu Dec 10 16:03:32 +0000 2009","AlexNowrasteh","95929534","27991","11142","Alex Nowrasteh",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"31","Michael F. Cannon","Sat Nov 07 18:55:17 +0000 2009","mfcannon","88246253","151","9143","Michael F. Cannon",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"32","Christopher Preble","Mon Oct 26 14:27:54 +0000 2009","capreble","85327023","1893","4299","Christopher A. Preble",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"33","Trevor Thrall","Thu Oct 08 16:07:26 +0000 2009","trevor_thrall","80880726","581","1631","A. Trevor Thrall",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"34","Ike Brannon","Tue Sep 08 02:23:48 +0000 2009","coachbuckethead","72449062","4101","638","Ike Brannon",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"35","José Piñera 🗽","Wed Aug 12 19:11:07 +0000 2009","josepinera_en","65128297","10","7562","José Piñera",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"36","Ian Vasquez","Tue Aug 04 22:33:31 +0000 2009","VasquezIan","62950059","109","3647","Ian Vásquez",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"37","Colin Grabow","Mon Jun 29 21:12:48 +0000 2009","cpgrabow","52191159","6116","943","Colin Grabow",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"38","Doug Bandow","Mon Jun 15 16:04:19 +0000 2009","Doug_Bandow","47368876","345","4506","Doug Bandow",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"39","David Boaz","Mon Jun 15 14:55:29 +0000 2009","David_Boaz","47353139","181","21136","David Boaz",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"40","Gabriela Calderon","Tue May 19 13:30:44 +0000 2009","gabricalderon","41115130","1022","17042","Gabriel Latner",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"41","Emily Ekins","Sun May 10 17:26:18 +0000 2009","emilyekins","39080168","818","4698","Emily Ekins",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"42","Jeffrey Miron","Sat May 09 18:00:14 +0000 2009","jeffreyamiron","38896254","1","3843","Jeffrey Miron",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"43","Juan Carlos Hidalgo","Sat Mar 07 19:23:56 +0000 2009","jchidalgo","23224517","3365","27183","Juan Carlos Hidalgo",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"44","Tate Lacey","Mon Feb 23 04:42:01 +0000 2009","TateLacey","21631669","0","189","Tate Lacey",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"45","Randal O'Toole","Thu Feb 19 23:04:46 +0000 2009","antiplanner","21350194","1","650","Randal O'Toole",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"46","Nick Rosenkranz","Thu Feb 12 03:23:11 +0000 2009","profnqr","20651107","12608","1442","Dick Komer",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"47","Trevor Burrus","Mon Jan 05 06:38:13 +0000 2009","TCBurrus","18625998","32","2965","Trevor Burrus",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"48","Tom G Palmer","Tue Oct 21 23:17:19 +0000 2008","tomgpalmer","16896057","4773","6075","Tom G. Palmer",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"49","Ilya Shapiro","Fri Oct 10 18:59:42 +0000 2008","ishapiro","16687344","8637","23773","Ilya Shapiro",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"50","Dan Ikenson","Tue Oct 07 20:10:26 +0000 2008","dikenson","16636104","2181","3525","Daniel J. Ikenson",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"51","Gene Healy","Sun Sep 14 00:57:41 +0000 2008","GeneHealy","16278340","2025","3109","Gene Healy",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"52","Walter Olson","Sun Sep 07 02:34:26 +0000 2008","walterolson","16164636","16962","20509","Walter Olson",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"53","Julian Sanchez","Fri Aug 31 01:47:26 +0000 2007","normative","8548612","8507","41131","Julian Sanchez",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"54","Aaron Ross Powell","Sun Jul 15 18:07:14 +0000 2007","ARossP","7490462","908","5609","Aaron Ross Powell",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
