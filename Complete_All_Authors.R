@@ -15,9 +15,6 @@ library(pbmcapply)
 library(openxlsx)
 #library(plyr)
 
-#################################################################################
-#################### Begin Module 1: Google Analytics ###########################
-#################################################################################
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
 current_date=as.Date(current_date)
@@ -25,11 +22,6 @@ current_date=as.Date(current_date)
 account_list=ga_account_list()
 ga_id=account_list$viewId[1]
 # Choose person(s) of interest
-cato_scholars=read.xlsx('Cato_Scholars.xlsx')
-#targets = cato_scholars %>% filter(str_detect(name.website, 'Vanessa'))
-name=targets$name.website;name=as.character(name)
-last_name=str_extract(name,'[^ ]+$')
-
 # Establish date range
 from="2014-07-01" # (Earliest Available)
 #from="2018-7-14" # (Insert Other)
@@ -41,17 +33,21 @@ fc2=filter_clause_ga4(list(# dimf #,dimf2
 			), operator = "OR")
 
 #### Construct File Name ####
-from_s = (from);from_m = as.character(from)
-from_y=str_sub(from, start=3, end = 4);from_m=str_sub(from, start=6, end = 7)
-to_y=str_sub(to, start=3, end = 4);to_m=str_sub(to, start=6, end = 7)
-analysis_range=paste0("(",from_m,from_y,'-',to_m,to_y,")")
-initials=function(a, b){
-	a=str_split(a, "&")
-	a1=lapply(a, function(x){
-		x1=str_split(str_trim(x), " ")
-		paste0(unlist(lapply(x1, str_sub, 1, 2)), collapse="")	})
-	paste0(unlist(a1), b) }
-analysis_identifier=initials(name,analysis_range)
+# from_s = (from);from_m = as.character(from)
+# from_y=str_sub(from, start=3, end = 4);from_m=str_sub(from, start=6, end = 7)
+# to_y=str_sub(to, start=3, end = 4);to_m=str_sub(to, start=6, end = 7)
+# analysis_range=paste0("(",from_m,from_y,'-',to_m,to_y,")")
+# initials=function(a, b){
+# 	a=str_split(a, "&")
+# 	a1=lapply(a, function(x){
+# 		x1=str_split(str_trim(x), " ")
+# 		paste0(unlist(lapply(x1, str_sub, 1, 2)), collapse="")	})
+# 	paste0(unlist(a1), b) }
+# analysis_identifier=initials(name,analysis_range)
+
+#################################################################################
+#################### Begin Module 1: Google Analytics ###########################
+#################################################################################
 
 #### Specify Search terms ####
 max = 500000000
@@ -84,7 +80,64 @@ df1$pageTitle=gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle) # Clean author nam
 authurs=as.list(unique(df1$author_full));name_sample=as.list(unique(df1$author_full))
 save(df1, file = "Big_Raw_GA_DAT.RData")
 save(name_sample, file = "NAME_SAMPLE.RData")
-
+#####################################################
+#### Initialize Cleanup of Google Analytics Data ####
+#####################################################
+load( file = "Big_Raw_GA_DAT.RData")
+df1$obs_day=as.Date(df1$date)
+df1$date=NULL
+#RemovePopularProxyStrings
+df1=df1[!grepl("search/srpcache",df1$pagePath),]
+df1=df1[!grepl("www.filterbypass.me",df1$pagePath),]
+df1=df1[!grepl("wikipedia.org/secure",df1$pagePath),]
+df1=df1[!grepl("www.googleadservices.com",df1$pagePath),]
+df1=df1[!grepl("bit.ly",df1$pagePath),]
+df1=df1[!grepl("j.mp",df1$pagePath),]
+df1=df1[!grepl("nl.hideproxy.me",df1$pagePath),]
+df1=df1[!grepl("cc.bingj.com",df1$pagePath),]
+df1=df1[!grepl("prolegis/getfile",df1$pagePath),]
+df1=df1[!grepl("cluster23-files.instructure",df1$pagePath),]
+df1=df1[!grepl("rorr.im/reddit.com",df1$pagePath),]
+df1=df1[!grepl("www.duplichecker.com",df1$pagePath),]
+df1=df1[!grepl("copyscape",df1$pagePath),]
+df1=df1[!grepl("us1.proxysite",df1$pagePath),]
+df1=df1[!grepl("eveil.alize",df1$pagePath),]
+df1=df1[!grepl("honyaku.yahoofs.jp",df1$pagePath),]
+df1=df1[!grepl("ow.ly",df1$pagePath),]
+df1=df1[!grepl("searchenginereports.net",df1$pagePath),]
+df1=df1[!grepl("xitenow",df1$pagePath),]
+df1=df1[!grepl("cato.us1.list-manage.com/track/click",df1$pagePath),]
+#MoreReshapingofPagePaths&RemoveTrailingStrings#
+df1$pagePath2=gsub(".*www.cato.org","www.cato.org",df1$pagePath)
+df1$pagePath2=gsub(pattern="[?].*","",x=df1$pagePath2)
+df1$pagePath2=gsub(pattern=".*https://*|&.*","",x=df1$pagePath2)
+df1$pagePath2=gsub(pattern=".*genius.it/*|&.*",replacement="",x=df1$pagePath2)
+df1$pagePath2=gsub(".*www-cato-org","www.cato.org",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub(".*www.cato.org.*?/publications","www.cato.org/publications",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub("\\.myaccess.library.utoronto.ca","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub("proxy.earlham.edu","www.cato.org",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub("object.cato.org","www.cato.org",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub("seekingalpha.com","www.cato.org",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub(".ezproxy.wallawalla.edu","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub(".stfi.re","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub(".helin.uri.edu","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub(".proxy.lib.pdx.edu","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub("www.cato.org:80","www.cato.org",df1$pagePath2,perl=TRUE)#Index.html
+df1$pagePath2=gsub("www.cato-at-liberty.org","www.cato.org/blog",df1$pagePath2,perl=TRUE)#Index.html
+df1$pagePath2=gsub("www.cato/","www.cato.org/",df1$pagePath2,perl=TRUE)#Index.html
+df1$pagePath2=gsub("index.html","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub(".jpllnet.sfsu.edu","",df1$pagePath2,perl=TRUE)
+df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2)
+df1$pagePath2=gsub(".ezproxy.csusm.edu","",df1$pagePath2,perl=TRUE)#Index.html
+df1$pagePath2=gsub("proxy.unfake.us/proxy/350/","www.cato.org/blog/",df1$pagePath2,perl=TRUE)#Index.html
+df1$pagePath2=ifelse(grepl("php$",df1$pagePath2)==T,df1$pagePath,df1$pagePath2)
+refcols=c("obs_day",'pagePath','pagePath2')
+df1=df1[,c(refcols,setdiff(names(df1),refcols))]
+df1$pagePath1=df1$pagePath
+df1$pagePath=df1$pagePath2
+df1$pagePath2=NULL
+rm(refcols,get_data)
+save(df1, file = "df1.RData")
 #######################################################################################
 ########################## Begin Module 2: Twitter ####################################
 #######################################################################################
@@ -123,96 +176,39 @@ scholars$title_category_3 = NA;scholars$category_3 = NA # Create Titles and Bins
 scholars$title_category_4 = NA;scholars$category_4 = NA # Create Titles and Bins for Categories 4
 scholars$title_category_5 = NA;scholars$category_5 = NA # Create Titles and Bins for Categories 5
 write.csv(scholars, "Cato_Scholars.csv") # Save
-detach('package:rjson');detach('package:twitteR');detach('package:ROAuth'); # Detach 1
-detach('package:httr');detach('package:XML');detach('package:anytime');detach('package:syuzhet')  # Detach 2
-rm(consumer_key, consumer_secret,access_token, access_token_secret,name_sample)
-rm(response,response.list,get_data,temp,twlist,to_m,to_y,i,cato_feeds,account_list,api.url,website.names)
-rm(cato_twitter,users.names,date_created,users.screennames,users.IDs,faves,followers,twowner,from_m,from_s,from_y)
-warnings()
+#detach('package:rjson');detach('package:twitteR');detach('package:ROAuth'); # Detach 1
+#detach('package:httr');detach('package:XML');detach('package:anytime');detach('package:syuzhet')  # Detach 2
+rm(consumer_key, consumer_secret,access_token, access_token_secret,name_sample,faves,twowner) # Clear environment
+rm(response,response.list,temp,twlist,to_m,to_y,i,cato_feeds,account_list,api.url,website.names)# Clear environment
+rm(cato_twitter,users.names,date_created,users.screennames,users.IDs,followers,from_m,from_s,from_y)# Clear environment
 # Generate vector to create column for each author
-load( file = "Big_Raw_GA_DAT.RData")
+load( file = "df1.RData")
 scholars=read.csv('Cato_Scholars.csv')
 authur_row=as.data.frame(scholars$name.website)
 colnames(authur_row) = authur_row[1, ] # the first row will be the header
 authur_row = authur_row[-1, ]          # removing the first row.
 authur_row=as.vector(as.character(authur_row))
 df1[as.character(authur_row)] = NA
-####################################################################
-### Stop here if column #s are altered since previous analysis!! ###
+##################################################################################
+###### Warning: Stop here if column #s are altered since previous analysis! ######
+##################################################################################
 colnames(df1)
-df1_1=df1[ ,1:9]
-df1_2=df1[ ,10:62]
+df1 = df1[, c(11, 1:10, 12:64)]
+df1_1=df1[ ,1:10]
+df1_2=df1[ ,11:64]
 df1_2[-1] = lapply(names(df1_2[-1]), function(nm) grepl(nm, df1_2[[1]]))
-df1=cbind(df1_1,df1_2)
+df2=cbind(df1_1,df1_2)
 rm(gadata, dim, dimf, dimf2, fc2,ga_id, met, max, vid)
-rm(df1_1,df1_2,authur_row)
-
-#####################################################
-#### Initialize Cleanup of Google Analytics Data ####
-#####################################################
-df1$obs_day=as.Date(df1$date)
-df1$date<-NULL
-#RemovePopularProxyStrings
-df1=df1[!grepl("search/srpcache",df1$pagePath),]
-df1=df1[!grepl("www.filterbypass.me",df1$pagePath),]
-df1=df1[!grepl("wikipedia.org/secure",df1$pagePath),]
-df1=df1[!grepl("www.googleadservices.com",df1$pagePath),]
-df1=df1[!grepl("bit.ly",df1$pagePath),]
-df1=df1[!grepl("j.mp",df1$pagePath),]
-df1=df1[!grepl("nl.hideproxy.me",df1$pagePath),]
-df1=df1[!grepl("cc.bingj.com",df1$pagePath),]
-df1=df1[!grepl("prolegis/getfile",df1$pagePath),]
-df1=df1[!grepl("cluster23-files.instructure",df1$pagePath),]
-df1=df1[!grepl("rorr.im/reddit.com",df1$pagePath),]
-df1=df1[!grepl("www.duplichecker.com",df1$pagePath),]
-df1=df1[!grepl("copyscape",df1$pagePath),]
-df1=df1[!grepl("us1.proxysite",df1$pagePath),]
-df1=df1[!grepl("eveil.alize",df1$pagePath),]
-df1=df1[!grepl("honyaku.yahoofs.jp",df1$pagePath),]
-df1=df1[!grepl("ow.ly",df1$pagePath),]
-df1=df1[!grepl("searchenginereports.net",df1$pagePath),]
-df1=df1[!grepl("xitenow",df1$pagePath),]
-df1=df1[!grepl("cato.us1.list-manage.com/track/click",df1$pagePath),]
-
-#MoreReshapingofPagePaths&RemoveTrailingStrings#
-df1$pagePath2=gsub(".*www.cato.org","www.cato.org",df1$pagePath)
-df1$pagePath2=gsub(pattern="[?].*","",x=df1$pagePath2)
-df1$pagePath2=gsub(pattern=".*https://*|&.*","",x=df1$pagePath2)
-df1$pagePath2=gsub(pattern=".*genius.it/*|&.*",replacement="",x=df1$pagePath2)
-df1$pagePath2=gsub(".*www-cato-org","www.cato.org",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub(".*www.cato.org.*?/publications","www.cato.org/publications",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub("\\.myaccess.library.utoronto.ca","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub("proxy.earlham.edu","www.cato.org",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub("object.cato.org","www.cato.org",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub("seekingalpha.com","www.cato.org",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub(".ezproxy.wallawalla.edu","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub(".stfi.re","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub(".helin.uri.edu","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub(".proxy.lib.pdx.edu","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub("www.cato.org:80","www.cato.org",df1$pagePath2,perl=TRUE)#Index.html
-df1$pagePath2=gsub("www.cato-at-liberty.org","www.cato.org/blog",df1$pagePath2,perl=TRUE)#Index.html
-df1$pagePath2=gsub("www.cato/","www.cato.org/",df1$pagePath2,perl=TRUE)#Index.html
-df1$pagePath2=gsub("index.html","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub(".jpllnet.sfsu.edu","",df1$pagePath2,perl=TRUE)
-df1$pagePath2=gsub("what-have-the-politicians-in-washington-given-us/","what-have-politicians-washington-given-us",df1$pagePath2)
-df1$pagePath2=gsub(".ezproxy.csusm.edu","",df1$pagePath2,perl=TRUE)#Index.html
-df1$pagePath2=gsub("proxy.unfake.us/proxy/350/","www.cato.org/blog/",df1$pagePath2,perl=TRUE)#Index.html
-df1$pagePath2=ifelse(grepl("php$",df1$pagePath2)==T,df1$pagePath,df1$pagePath2)
-refcols=c("obs_day",'pagePath','pagePath2')
-df1=df1[,c(refcols,setdiff(names(df1),refcols))]
-df1$pagePath1=df1$pagePath
-df1$pagePath=df1$pagePath2
-df1$pagePath2=NULL
-rm(refcols)
-save(df1, file = "df1.RData")
-########################################################
-############# Match with Cato Sitemap XML ##############
-########################################################
-#### Split ####
+rm(df1_1,df1_2,authur_row,df1)
+save(df2, file = "df2.RData")
+##################################################################################
+##################### Begin Module 3: Cato Sitemap XML ###########################
+##################################################################################
 library(stringdist)
 library(xml2)
 library(XML)
 library(data.table)
+#### Download & Split ####
 url_1=download_xml('https://www.cato.org/sitemap.xml?page=1')
 url_2=download_xml('https://www.cato.org/sitemap.xml?page=2')
 # Read XML 1
@@ -227,25 +223,23 @@ tagsList=xmlToList(xmlfile)# Convert to List
 tagsList=lapply(tagsList, function(x) as.data.table(as.list(x)))# Each List element is a character vector. Convert them.
 tags_2=rbindlist(tagsList, use.names = T, fill = T) # Rbind all the 1-row data.tables into a single data.table
 tags_2=as.data.frame(tags_2) # convert to dataframe
-# Combine these
-names(tags_1)
+# Combine XML tag pages
 url_vector=merge(tags_1, tags_2, by=c('loc',"priority",'changefreq','lastmod','schemaLocation'), all = T)
 url_vector=as.vector(url_vector$loc) # This is your vector of URLs from the XML Files
-
-#### Apply & Save ####
+######## Apply & Save ########
 SafeGet = function (x)	{
 	tryCatch({
 	#short_url_vector
 	html=GET(x)
+	print(html)
 	parsed=htmlParse(html)
 	root=xmlRoot(parsed)
 	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
 	return(title)	
-	Sys.sleep(.01)},
+	Sys.sleep(.001)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
-
 split_url_vector = split(url_vector, ceiling(seq_along(url_vector)/5000))
-split_1=split_url_vector[[1]];responses_1=pbmclapply(split_1,SafeGet,mc.preschedule=T);save(responses_1,file="responses_1.RData");rm(split_1)
+split_1=split_url_vector[[1]];responses_1=pbmclapply(split_1,SafeGet,mc.preschedule=T);save(responses_1,file="responses_1.RData");rm(split_1) 
 split_2=split_url_vector[[2]];responses_2=pbmclapply(split_2,SafeGet,mc.preschedule=T);save(responses_2,file="responses_2.RData");rm(split_2)
 split_3=split_url_vector[[3]];responses_3=pbmclapply(split_3,SafeGet,mc.preschedule=T);save(responses_3,file="responses_3.RData");rm(split_3)
 split_4=split_url_vector[[4]];responses_4=pbmclapply(split_4,SafeGet,mc.preschedule=T);save(responses_4,file="responses_4.RData");rm(split_4)
@@ -259,23 +253,23 @@ split_11=split_url_vector[[11]];responses_11=pbmclapply(split_11,SafeGet,mc.pres
 split_12=split_url_vector[[12]];responses_12=pbmclapply(split_12,SafeGet,mc.preschedule=T);save(responses_12,file="responses_12.RData");rm(split_12)
 split_13=split_url_vector[[13]];responses_13=pbmclapply(split_13,SafeGet,mc.preschedule=T);save(responses_13,file="responses_13.RData");rm(split_13)
 split_14=split_url_vector[[14]];responses_14=pbmclapply(split_14,SafeGet,mc.preschedule=T);save(responses_14,file="responses_14.RData");rm(split_14)
+#################### Combine & Clean ########################## 
+load(file="responses_1.RData");load(file="responses_2.RData");load(file="responses_3.RData");load(file="responses_4.RData");load(file="responses_5.RData");load(file="responses_6.RData");load(file="responses_7.RData");load(file="responses_8.RData");load(file="responses_9.RData");load(file="responses_10.RData");load(file="responses_11.RData");load(file="responses_12.RData");load(file="responses_13.RData");load(file="responses_14.RData");
+website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14)
 
-#################### Combine ########################## 
-load(file="responses_1.RData");load(file="responses_2.RData");load(file="responses_3.RData");load(file="responses_4.RData");load(file="responses_5.RData");load(file="responses_6.RData");load(file="responses_7.RData");load(file="responses_8.RData");load(file="responses_9.RData");load(file="responses_10.RData");load(file="responses_11.RData");load(file="responses_12.RData");load(file="responses_13.RData");load(file="responses_14.RData"););website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14)
-
-title=trimws(website_responses)
-link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+title=trimws(website_responses);link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 save(link_title_df, file = "link_title_df.RData")
 
-# Load
-load(file = "link_title_df.RData")
+#########################################################################################
+############# Begin Module 4: Match Google Analytics with Cato Sitemap XML ##############
+#########################################################################################
+df_intermediate
+load(file = "link_title_df.RData") # Load XML Data
 is.na(link_title_df) = lengths(link_title_df) == 0
 link_title_df[lengths(link_title_df) == 0] = NA
 link_title_df=subset(link_title_df, (link_title_df$title)!='NA')
 title_list<-link_title_df[["title"]]
 url_list=link_title_df[["pagePath"]]
-
-rm(url_1,url_2, tags_1, tags_2, xmlfile, tagsList, title, website_responses)
 df_intermediate = merge(df1, link_title_df, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 
 save(df_intermediate, file = "df_intermediate.RData")
@@ -326,12 +320,12 @@ load( file = "Big_Title_Vector.RData")
 load( file = "Big_LinkedTitle.RData")
 linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
-
 save(df_intermediate, file = "df_intermediate.RData")
-#####################################################
-################ Scrape Cato Web Data ############### 
-#####################################################
-ClosestMatch = function(string){url_list[amatch(string, url_list, maxDist=40,nomatch=0)]}
+
+#########################################################################
+################# Begin Module 5: Scrape Cato Web Data ##################
+#########################################################################
+load(file = "df_intermediate.RData")
 
 title_vector_dfi=df_intermediate[["title"]]
 
@@ -356,8 +350,7 @@ df_intermediate=merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'p
 df_intermediate$type = unlist(df_intermediate$type)
 
 # Extract web content from Cato Website
-text_content=df_intermediate %>%
-	distinct(pagePath, title, type)
+text_content=df_intermediate %>% distinct(pagePath, title, type)
 text_content=text_content[!duplicated(text_content),]
 text_url_vector=text_content[["pagePath"]]
 text_responses=pbmclapply(text_url_vector, GET) 
@@ -370,23 +363,23 @@ body_vector = pbmclapply(text_responses, function (filename) {
 	body=trimws(body)})
 body_count=pbmclapply(gregexpr("[[:alpha:]]+", body_vector), function(x) sum(x > 0))
 
-pub_date_output = pbmclapply(text_responses, function (filename) {
+pub_date_output = pbmclapply(text_responses, function(filename){
 	doc = htmlParse(filename)
 	pub_date = xpathSApply(doc, "//meta[@name='publication_date'][1]",xmlGetAttr,'content')})
 
-tags_output = pbmclapply(text_responses, function (filename) {
+tags_output = pbmclapply(text_responses, function(filename){
 	doc = htmlParse(filename)
 	tags = xpathSApply(doc, "//div[@class='field-tags inline']", xmlValue)
 	tags =  gsub("\n", ' ', tags)
 	tags=trimws((tags))})
 	
-	topics_output = pbmclapply(text_responses, function (filename) {
+topics_output = pbmclapply(text_responses, function(filename){
 		doc = htmlParse(filename)
 		topics = xpathSApply(doc, "//div[@class='field-topics inline']", xmlValue)
 		topics =  gsub("\n", ' ', topics)
 		topics=trimws((topics))})
-	text_df=data.frame(cbind(body=body_vector,body_count=body_count,topics=topics_output,tags=tags_output,pub_date=pub_date_output ))
-	text_stats=cbind(text_content, text_df)
+text_df=data.frame(cbind(body=body_vector,body_count=body_count,topics=topics_output,tags=tags_output,pub_date=pub_date_output))
+text_stats=cbind(text_content, text_df)
 
 #######################################################
 ######## Text Analysis	- Generate Text Wall ###########
