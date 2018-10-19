@@ -1,7 +1,6 @@
 # Google Analytics
 setwd("~/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)")
 # My Packages
-library(googleAnalyticsR)
 library(tidyverse)
 library(httr)
 library(RCurl)
@@ -18,19 +17,10 @@ library(openxlsx)
 # Define Date
 current_date=format(Sys.time(), "%Y-%m-%d")
 current_date=as.Date(current_date)
-# Open Google Analytics
-account_list=ga_account_list()
-ga_id=account_list$viewId[1]
-# Choose person(s) of interest
 # Establish date range
 from="2014-07-01" # (Earliest Available)
 #from="2018-7-14" # (Insert Other)
 to =as.character(current_date)
-#### create filters on dimensions ####
-dimf=dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
-dimf2=dim_filter("countryIsoCode","EXACT","US",not = F)
-fc2=filter_clause_ga4(list(# dimf #,dimf2
-			), operator = "OR")
 
 #### Construct File Name ####
 # from_s = (from);from_m = as.character(from)
@@ -48,7 +38,15 @@ fc2=filter_clause_ga4(list(# dimf #,dimf2
 #################################################################################
 #################### Begin Module 1: Google Analytics ###########################
 #################################################################################
-
+library(googleAnalyticsR)
+# Open Google Analytics
+account_list=ga_account_list()
+ga_id=account_list$viewId[1]
+#### create filters on dimensions ####
+dimf=dim_filter("dimension1","PARTIAL", expressions=name,not = F, caseSensitive = F)
+dimf2=dim_filter("countryIsoCode","EXACT","US",not = F)
+fc2=filter_clause_ga4(list(# dimf #,dimf2
+			), operator = "OR")
 #### Specify Search terms ####
 max = 500000000
 met = c("sessions", #"pageviews",
@@ -80,6 +78,7 @@ df1$pageTitle=gsub("([ | ].*)[ | ] .*", "\\1", df1$pageTitle) # Clean author nam
 authurs=as.list(unique(df1$author_full));name_sample=as.list(unique(df1$author_full))
 save(df1, file = "Big_Raw_GA_DAT.RData")
 save(name_sample, file = "NAME_SAMPLE.RData")
+rm(from_m,from_s,from_y,initials,account_list,ga_id,fc2,dimf2,to_m,to_y)
 #####################################################
 #### Initialize Cleanup of Google Analytics Data ####
 #####################################################
@@ -257,26 +256,54 @@ split_14=split_url_vector[[14]];responses_14=pbmclapply(split_14,SafeGet,mc.pres
 load(file="responses_1.RData");load(file="responses_2.RData");load(file="responses_3.RData");load(file="responses_4.RData");load(file="responses_5.RData");load(file="responses_6.RData");load(file="responses_7.RData");load(file="responses_8.RData");load(file="responses_9.RData");load(file="responses_10.RData");load(file="responses_11.RData");load(file="responses_12.RData");load(file="responses_13.RData");load(file="responses_14.RData");
 website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14)
 
-title=trimws(website_responses);link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+title=trimws(website_responses);
+link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
+
 save(link_title_df, file = "link_title_df.RData")
+rm(tags_1,tags_2,tagsList,xmlfile,url_1,url_2,split_url_vector,website_responses)
 
 #########################################################################################
 ############# Begin Module 4: Match Google Analytics with Cato Sitemap XML ##############
 #########################################################################################
-df_intermediate
-load(file = "link_title_df.RData") # Load XML Data
-is.na(link_title_df) = lengths(link_title_df) == 0
-link_title_df[lengths(link_title_df) == 0] = NA
-link_title_df=subset(link_title_df, (link_title_df$title)!='NA')
-title_list<-link_title_df[["title"]]
-url_list=link_title_df[["pagePath"]]
-df_intermediate = merge(df1, link_title_df, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=20,nomatch='0')]}
+ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf)]}
 
-save(df_intermediate, file = "df_intermediate.RData")
+load(file = "df2.RData") # Load Dataframe with Twitter Data
+load(file = "link_title_df.RData") # Load XML Dataframe
+link_title_df$title = as.character(link_title_df$title)
+link_title_df$pagePath = as.character(link_title_df$pagePath)
+link_title_df[length(link_title_df$title)==0]=NA
+link_title_df=subset(link_title_df, (link_title_df$title)!='NA')
+link_title_df=link_title_df[!(is.na(link_title_df$title)|link_title_df$title=='list()'),]
+
+##### URLs #####
+url_list=link_title_df[["pagePath"]]
+df_path_1=df2[["pagePath"]]
+df_path_2=df2[["pagePath1"]]
+##### Titles #####
+df2$pageTitle=trimws(df2$pageTitle);
+title_list=as.list(link_title_df[["title"]])
+df_title=as.list(unique(df2[["pageTitle"]]))
+#alt_title=pbmclapply(df_title, title_list, ClosestMatch2,mc.preschedule=T)
+split_title_vector = split(df_title, ceiling(seq_along(df_title)/50))
+alt_title = list();for(i in seq_along(split_title_vector[[1]])){
+	alt_title[i] = ClosestMatch2(df_title, split_title_vector[[1]]) }
+
+split_1=split_title_vector[[1]];responses_1=pbmclapply(split_1,title_list,ClosestMatch2,mc.preschedule=T)
+
+save(responses_1,file="responses_1.RData");rm(split_1) 
+
+website.names = list();for(i in seq_along(df_title)){
+	temp=scholars$name.twitter[i]
+	
+	website.names[i] = ClosestMatch2(temp, name_sample) }
+
+alt_page=pbmclapply(url_vector_dfi, ClosestMatch2)
+
+df_intermediate = merge(link_title_df,df2, by.x = 'title', by.y = 'pageTitle', all.y=T)
 ############# Save Split-Apply-Combine #################
 
 
-link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
 
 df_intermediate=df_intermediate[(df_intermediate$title)!='NA',]
 url_vector_dfi=df_intermediate[["pagePath"]]
@@ -285,11 +312,7 @@ url_vector_dfi=as.vector(unique(url_vector_dfi))
 title_vector_dfi=df_intermediate[["title"]]
 title_vector_dfi=as.vector(unique(title_vector_dfi))
 
-ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
-ClosestMatch3 = function(string){url_vector[amatch(string, url_list, maxDist=40,nomatch=0)]}
-
 #ClosestMatch2(url_vector_dfi, url_list)
-alt_page=pbmclapply(url_vector_dfi, ClosestMatch2)
 
 is.na(alt_page) = lengths(alt_page) == 0
 alt_page[lengths(alt_page) == 0] = 0
