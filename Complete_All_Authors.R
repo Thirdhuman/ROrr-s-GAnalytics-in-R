@@ -64,7 +64,7 @@ vid="3016983"
 get_data=function(vid,from,to,dim,met,max){df=google_analytics(
 			viewId=vid,date_range=c(from,to),metrics=met,dimensions=dim, #met_filters = fc, 
  		dim_filters = fc2,  max = max	,anti_sample = TRUE)
-# clean up and set class
+		# clean up and set class
 		df$dimension1 = gsub('O&#039;Toole', "O'Toole", df$dimension1)
 		df$dimension1 = gsub('&#039;', "'", df$dimension1)
 		df$dimension1 = gsub('&quot;Chip&quot;',  "'Chip'", df$dimension1)
@@ -225,17 +225,16 @@ tags_2=as.data.frame(tags_2) # convert to dataframe
 # Combine XML tag pages
 url_vector=merge(tags_1, tags_2, by=c('loc',"priority",'changefreq','lastmod','schemaLocation'), all = T)
 url_vector=as.vector(url_vector$loc) # This is your vector of URLs from the XML Files
+save(url_vector, file = "url_vector.RData")
+load('url_vector.RData')
 ######## Apply & Save ########
 SafeGet = function (x)	{
 	tryCatch({
 	#short_url_vector
-	html=GET(x)
-	print(html)
-	parsed=htmlParse(html)
-	root=xmlRoot(parsed)
+	html=GET(x);print(html)
+	parsed=htmlParse(html);	root=xmlRoot(parsed)
 	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
-	return(title)	
-	Sys.sleep(.001)},
+	return(title);Sys.sleep(.001)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 split_url_vector = split(url_vector, ceiling(seq_along(url_vector)/5000))
 split_1=split_url_vector[[1]];responses_1=pbmclapply(split_1,SafeGet,mc.preschedule=T);save(responses_1,file="responses_1.RData");rm(split_1) 
@@ -253,52 +252,67 @@ split_12=split_url_vector[[12]];responses_12=pbmclapply(split_12,SafeGet,mc.pres
 split_13=split_url_vector[[13]];responses_13=pbmclapply(split_13,SafeGet,mc.preschedule=T);save(responses_13,file="responses_13.RData");rm(split_13)
 split_14=split_url_vector[[14]];responses_14=pbmclapply(split_14,SafeGet,mc.preschedule=T);save(responses_14,file="responses_14.RData");rm(split_14)
 #################### Combine & Clean ########################## 
-load(file="responses_1.RData");load(file="responses_2.RData");load(file="responses_3.RData");load(file="responses_4.RData");load(file="responses_5.RData");load(file="responses_6.RData");load(file="responses_7.RData");load(file="responses_8.RData");load(file="responses_9.RData");load(file="responses_10.RData");load(file="responses_11.RData");load(file="responses_12.RData");load(file="responses_13.RData");load(file="responses_14.RData");
-website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14)
-
-title=trimws(website_responses);
-link_title_df=as.data.frame(cbind(title=title, pagePath=url_vector))
-
+load(file="responses_1.RData");load(file="responses_2.RData");load(file="responses_3.RData");load(file="responses_4.RData");load(file="responses_5.RData");load(file="responses_6.RData");load(file="responses_7.RData");load(file="responses_8.RData");load(file="responses_9.RData");load(file="responses_10.RData");load(file="responses_11.RData");load(file="responses_12.RData");load(file="responses_13.RData");load(file="responses_14.RData");load(file="url_vector.RData")
+website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14);website_responses=trimws(website_responses);
+link_title_df=as.data.frame(cbind(XML_PageTitle=website_responses, pagePath=url_vector))
 save(link_title_df, file = "link_title_df.RData")
 rm(tags_1,tags_2,tagsList,xmlfile,url_1,url_2,split_url_vector,website_responses)
 
 #########################################################################################
 ############# Begin Module 4: Match Google Analytics with Cato Sitemap XML ##############
 #########################################################################################
-ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=20,nomatch='0')]}
-ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf)]}
-
 load(file = "df2.RData") # Load Dataframe with Twitter Data
 load(file = "link_title_df.RData") # Load XML Dataframe
-link_title_df$title = as.character(link_title_df$title)
-link_title_df$pagePath = as.character(link_title_df$pagePath)
-link_title_df[length(link_title_df$title)==0]=NA
-link_title_df=subset(link_title_df, (link_title_df$title)!='NA')
-link_title_df=link_title_df[!(is.na(link_title_df$title)|link_title_df$title=='list()'),]
+load('url_vector.RData')
 
+ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=2,nomatch=0)]}
+SafeMatch = function (x){tryCatch({
+	matched=ClosestMatch2(x, title_list);return(matched);Sys.sleep(0)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
+link_title_df$XML_PageTitle = as.character(link_title_df$XML_PageTitle)
+link_title_df$pagePath = as.character(link_title_df$pagePath)
+link_title_df[length(link_title_df$XML_PageTitle)==0]=NA
+link_title_df=subset(link_title_df, (link_title_df$XML_PageTitle)!='NA')
+link_title_df=link_title_df[!(is.na(link_title_df$XML_PageTitle)|link_title_df$XML_PageTitle=='list()'),]
 ##### URLs #####
-url_list=link_title_df[["pagePath"]]
-df_path_1=df2[["pagePath"]]
-df_path_2=df2[["pagePath1"]]
+#url_list=link_title_df[["pagePath"]]
+#df_path_1=df2[["pagePath"]]
+#df_path_2=df2[["pagePath1"]]
 ##### Titles #####
 df2$pageTitle=trimws(df2$pageTitle);
-title_list=as.list(link_title_df[["title"]])
-df_title=as.list(unique(df2[["pageTitle"]]))
-#alt_title=pbmclapply(df_title, title_list, ClosestMatch2,mc.preschedule=T)
-split_title_vector = split(df_title, ceiling(seq_along(df_title)/50))
-alt_title = list();for(i in seq_along(split_title_vector[[1]])){
-	alt_title[i] = ClosestMatch2(df_title, split_title_vector[[1]]) }
+title_list=(link_title_df[["title"]])
+df_title=(unique(df2[["pageTitle"]]))
+#### Match function ####
+title_vector = split(df_title, ceiling(seq_along(df_title)/5000))
+alt_title1=title_vector[[1]];match1=pbmclapply(alt_title1,SafeMatch,mc.preschedule=T);save(match1,file="match1.RData");rm(alt_title1) 
+alt_title2=title_vector[[2]];match2=pbmclapply(alt_title2,SafeMatch,mc.preschedule=T);save(match2,file="match2.RData");rm(alt_title2)
+alt_title3=title_vector[[3]];match3=pbmclapply(alt_title3,SafeMatch,mc.preschedule=T);save(match3,file="match3.RData");rm(alt_title3)
+alt_title4=title_vector[[4]];match4=pbmclapply(alt_title4,SafeMatch,mc.preschedule=T);save(match4,file="match4.RData");rm(alt_title4)
+alt_title5=title_vector[[5]];match5=pbmclapply(alt_title5,SafeMatch,mc.preschedule=T);save(match5,file="match5.RData");rm(alt_title5)
+alt_title6=title_vector[[6]];match6=pbmclapply(alt_title6,SafeMatch,mc.preschedule=T);save(match6,file="match6.RData");rm(alt_title6)
+alt_title7=title_vector[[7]];match7=pbmclapply(alt_title7,SafeMatch,mc.preschedule=T);save(match7,file="match7.RData");rm(alt_title7)
+alt_title8=title_vector[[8]];match8=pbmclapply(alt_title8,SafeMatch,mc.preschedule=T);save(match8,file="match8.RData");rm(alt_title8)
+alt_title9=title_vector[[9]];match9=pbmclapply(alt_title9,SafeMatch,mc.preschedule=T);save(match9,file="match9.RData");rm(alt_title9)
+alt_title10=title_vector[[10]];match10=pbmclapply(alt_title10,SafeMatch,mc.preschedule=T);save(match10,file="match10.RData");rm(alt_title10)
+alt_title11=title_vector[[11]];match11=pbmclapply(alt_title11,SafeMatch,mc.preschedule=T);save(match11,file="match11.RData");rm(alt_title11)
+alt_title12=title_vector[[12]];match12=pbmclapply(alt_title12,SafeMatch,mc.preschedule=T);save(match12,file="match12.RData");rm(alt_title12)
+alt_title13=title_vector[[13]];match13=pbmclapply(alt_title13,SafeMatch,mc.preschedule=T);save(match13,file="match13.RData");rm(alt_title13)
+alt_title14=title_vector[[14]];match14=pbmclapply(alt_title14,SafeMatch,mc.preschedule=T);save(match14,file="match14.RData");rm(alt_title14)
+#### Load and combine titles ####
+load(file="match1.RData");load(file="match2.RData");load(file="match3.RData");load(file="match4.RData");load(file="match5.RData");load(file="match6.RData");load(file="match7.RData");load(file="match8.RData");load(file="match9.RData");load(file="match10.RData");load(file="match11.RData");load(file="match12.RData");load(file="match13.RData");load(file="match14.RData");
+title_matches=(c(match1,match2,match3,match4,match5,match6,match7,match8,match9,match10,match11,match12,match13,match14));rm(match1,match2,match3,match4,match5,match6,match7,match8,match9,match10,match11,match12,match13,match14);
+#title_matches=trimws(title_matches);
+title_match_df=as.data.frame(cbind(pageTitle=df_title, alt_PageTitle=title_matches))
+title_match_df=as.data.frame(title_match_df)
+link_title_df=as.data.frame(link_title_df)
+names(title_match_df)
+names(link_title_df)
 
-split_1=split_title_vector[[1]];responses_1=pbmclapply(split_1,title_list,ClosestMatch2,mc.preschedule=T)
+xml_match = merge(title_match_df, link_title_df, by.x = 'alt_PageTitle', by.y = 'XML_PageTitle', all=T)
 
-save(responses_1,file="responses_1.RData");rm(split_1) 
+# save(link_title_df, file = "link_title_df.RData")
+# rm(tags_1,tags_2,tagsList,xmlfile,url_1,url_2,split_url_vector,website_responses)
 
-website.names = list();for(i in seq_along(df_title)){
-	temp=scholars$name.twitter[i]
-	
-	website.names[i] = ClosestMatch2(temp, name_sample) }
-
-alt_page=pbmclapply(url_vector_dfi, ClosestMatch2)
 
 df_intermediate = merge(link_title_df,df2, by.x = 'title', by.y = 'pageTitle', all.y=T)
 ############# Save Split-Apply-Combine #################
