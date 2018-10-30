@@ -1,6 +1,5 @@
 # Google Analytics
 setwd("~/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)")
-# My Packages
 library(tidyverse)
 library(httr)
 library(RCurl)
@@ -253,7 +252,7 @@ split_13=split_url_vector[[13]];responses_13=pbmclapply(split_13,SafeGet,mc.pres
 split_14=split_url_vector[[14]];responses_14=pbmclapply(split_14,SafeGet,mc.preschedule=T);save(responses_14,file="responses_14.RData");rm(split_14)
 #################### Combine & Clean ########################## 
 load(file="responses_1.RData");load(file="responses_2.RData");load(file="responses_3.RData");load(file="responses_4.RData");load(file="responses_5.RData");load(file="responses_6.RData");load(file="responses_7.RData");load(file="responses_8.RData");load(file="responses_9.RData");load(file="responses_10.RData");load(file="responses_11.RData");load(file="responses_12.RData");load(file="responses_13.RData");load(file="responses_14.RData");load(file="url_vector.RData")
-website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14);website_responses=trimws(website_responses);
+website_responses=(c(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11,responses_12,responses_13,responses_14));rm(responses_1,responses_2,responses_3,responses_4,responses_5,responses_6,responses_7,responses_8,responses_9,responses_10,responses_11, responses_12,responses_13,responses_14);website_responses=trimws(website_responses);
 link_title_df=as.data.frame(cbind(XML_PageTitle=website_responses, pagePath=url_vector))
 save(link_title_df, file = "link_title_df.RData")
 rm(tags_1,tags_2,tagsList,xmlfile,url_1,url_2,split_url_vector,website_responses)
@@ -280,8 +279,9 @@ link_title_df=link_title_df[!(is.na(link_title_df$XML_PageTitle)|link_title_df$X
 #df_path_2=df2[["pagePath1"]]
 ##### Titles #####
 df2$pageTitle=trimws(df2$pageTitle);
-title_list=(link_title_df[["title"]])
+title_list=(link_title_df[["XML_PageTitle"]])
 df_title=(unique(df2[["pageTitle"]]))
+df_title_list=as.list(df_title)
 #### Match function ####
 title_vector = split(df_title, ceiling(seq_along(df_title)/5000))
 alt_title1=title_vector[[1]];match1=pbmclapply(alt_title1,SafeMatch,mc.preschedule=T);save(match1,file="match1.RData");rm(alt_title1) 
@@ -300,22 +300,43 @@ alt_title13=title_vector[[13]];match13=pbmclapply(alt_title13,SafeMatch,mc.presc
 alt_title14=title_vector[[14]];match14=pbmclapply(alt_title14,SafeMatch,mc.preschedule=T);save(match14,file="match14.RData");rm(alt_title14)
 #### Load and combine titles ####
 load(file="match1.RData");load(file="match2.RData");load(file="match3.RData");load(file="match4.RData");load(file="match5.RData");load(file="match6.RData");load(file="match7.RData");load(file="match8.RData");load(file="match9.RData");load(file="match10.RData");load(file="match11.RData");load(file="match12.RData");load(file="match13.RData");load(file="match14.RData");
-title_matches=(c(match1,match2,match3,match4,match5,match6,match7,match8,match9,match10,match11,match12,match13,match14));rm(match1,match2,match3,match4,match5,match6,match7,match8,match9,match10,match11,match12,match13,match14);
-#title_matches=trimws(title_matches);
+title_matches=as.list(c(match1,match2,match3,match4,match5,match6,match7,match8,match9,match10,match11,match12,match13,match14));rm(match1,match2,match3,match4,match5,match6,match7,match8,match9,match10,match11,match12,match13,match14);
+title_matches=trimws(title_matches);
 title_match_df=as.data.frame(cbind(pageTitle=df_title, alt_PageTitle=title_matches))
-title_match_df=as.data.frame(title_match_df)
-link_title_df=as.data.frame(link_title_df)
-names(title_match_df)
-names(link_title_df)
+title_match_df=as.data.frame(title_match_df);link_title_df=as.data.frame(link_title_df)
+title_match_df$pageTitle=as.character(title_match_df$pageTitle);title_match_df$alt_PageTitle=as.character(title_match_df$alt_PageTitle);
+names(link_title_df)[names(link_title_df) == 'pagePath'] ='XML_pagePath'
 
-xml_match = merge(title_match_df, link_title_df, by.x = 'alt_PageTitle', by.y = 'XML_PageTitle', all=T)
+xml_match = merge(title_match_df, link_title_df, by.x = 'alt_PageTitle', by.y = 'XML_PageTitle', all.y =T,no.dups = TRUE)
+xml_match=xml_match[complete.cases(xml_match), ]
 
-# save(link_title_df, file = "link_title_df.RData")
-# rm(tags_1,tags_2,tagsList,xmlfile,url_1,url_2,split_url_vector,website_responses)
+non_dups=xml_match[!duplicated(xml_match$pageTitle),]
+dups=xml_match[duplicated(xml_match$pageTitle),]
 
+events_df2=df2[grep("events", rownames(df2$XML_pagePath)), ]
+multimedia_df2=df2[grep("multimedia", rownames(df2$XML_pagePath)), ]
+events_match=dups[grep("events", rownames(dups$XML_pagePath)), ]
+multimedia_match=dups[grep("multimedia", rownames(dups$XML_pagePath)), ]
 
-df_intermediate = merge(link_title_df,df2, by.x = 'title', by.y = 'pageTitle', all.y=T)
+df_intermediate = merge(xml_match,df2, by.x = 'pageTitle',by.y ='pageTitle',all.y=T, no.dups = T)
+
 ############# Save Split-Apply-Combine #################
+
+
+#### Get Title ####
+type_list=pbmclapply(url_list, function(url){type = gsub('www.cato.org*/|/.*', "\\1", url)
+type = gsub('-', " ", type)
+type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
+type_2 = gsub('-', " ", type_2)
+type=ifelse((type=="publications"), type_2, type)})
+
+type_df=data.frame(cbind(type=type_list))
+type_df=as.data.frame(cbind(type=type_list, pagePath=url_vector))
+type_df_full=as.data.frame(cbind(pagePath=url_vector_full))
+linked_type= merge(type_df_full, type_df, by=('pagePath'), all.x=T)
+linked_type=unique(linked_type)
+df_intermediate=merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+df_intermediate$type = unlist(df_intermediate$type)
 
 
 
@@ -372,19 +393,6 @@ url_vector_dfi=url_vector_dfi[nchar(url_vector_dfi) > 16]
 #ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=Inf,nomatch=0)]}
 url_list = df_intermediate$pagePath
 
-type_list=pbmclapply(url_list, function(url){type = gsub('www.cato.org*/|/.*', "\\1", url)
-type = gsub('-', " ", type)
-type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
-type_2 = gsub('-', " ", type_2)
-type=ifelse((type=="publications"), type_2, type)})
-
-type_df=data.frame(cbind(type=type_list))
-type_df=as.data.frame(cbind(type=type_list, pagePath=url_vector))
-type_df_full=as.data.frame(cbind(pagePath=url_vector_full))
-linked_type= merge(type_df_full, type_df, by=('pagePath'), all.x=T)
-linked_type=unique(linked_type)
-df_intermediate=merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
-df_intermediate$type = unlist(df_intermediate$type)
 
 # Extract web content from Cato Website
 text_content=df_intermediate %>% distinct(pagePath, title, type)
