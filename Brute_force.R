@@ -11,6 +11,8 @@ library(data.table)
 library(stringdist)
 library(pbmcapply)
 library(openxlsx)
+library(tools)
+
 #library(plyr)
 
 # Define Date
@@ -230,7 +232,7 @@ load('url_vector.RData')
 SafeGet = function (x)	{
 	tryCatch({
 	#short_url_vector
-	html=GET(x);print(html)
+	html=GET(x)
 	parsed=htmlParse(html);	root=xmlRoot(parsed)
 	title = xpathSApply(root, "//h1[@class='page-h1'][1]", xmlValue)
 	return(title);Sys.sleep(.001)},
@@ -266,7 +268,7 @@ load('url_vector.RData')
 
 ClosestMatch2 = function(string, stringVector){stringVector[amatch(string, stringVector, maxDist=2,nomatch=0)]}
 SafeMatch = function (x){tryCatch({
-	matched=ClosestMatch2(x, title_list);return(matched);Sys.sleep(0)},
+	matched=ClosestMatch2(x, title_list);return(matched)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 link_title_df$XML_PageTitle = as.character(link_title_df$XML_PageTitle)
 link_title_df$pagePath = as.character(link_title_df$pagePath)
@@ -306,36 +308,175 @@ title_match_df=as.data.frame(cbind(pageTitle=df_title, alt_PageTitle=title_match
 title_match_df=as.data.frame(title_match_df);link_title_df=as.data.frame(link_title_df)
 title_match_df$pageTitle=as.character(title_match_df$pageTitle);title_match_df$alt_PageTitle=as.character(title_match_df$alt_PageTitle);
 names(link_title_df)[names(link_title_df) == 'pagePath'] ='XML_pagePath'
-
 xml_match = merge(title_match_df, link_title_df, by.x = 'alt_PageTitle', by.y = 'XML_PageTitle', all.y =T,no.dups = TRUE)
 xml_match=xml_match[complete.cases(xml_match), ]
-
 non_dups=xml_match[!duplicated(xml_match$pageTitle),]
-dups=xml_match[duplicated(xml_match$pageTitle),]
+df_intermediate = merge(non_dups,df2, by.x = 'pageTitle',by.y ='pageTitle',all.y=T, no.dups = T)
+df_intermediate$pagePath= ifelse(is.na(df_intermediate$XML_pagePath), df_intermediate$pagePath, df_intermediate$XML_pagePath)
+df_clean = df_intermediate;
+df_clean$XML_pagePath=NULL;df_clean$alt_PageTitle=NULL; df_clean$pagePath1=NULL
+save(df_clean, file = "df_clean.RData")
+rm(df_clean);rm(non_dups,df_intermediate,title_match_df,xml_match,url_vector,link_title_df,df1_2,df_1,website_responses,title_list,title_vector,title_matches,df_title_list,df_title,df2)
 
-events_df2=df2[grep("events", rownames(df2$XML_pagePath)), ]
-multimedia_df2=df2[grep("multimedia", rownames(df2$XML_pagePath)), ]
-events_match=dups[grep("events", rownames(dups$XML_pagePath)), ]
-multimedia_match=dups[grep("multimedia", rownames(dups$XML_pagePath)), ]
+#########################################################################
+################# Begin Module 5: Label Web URL by Type #################
+#########################################################################
+load(file = "df_clean.RData") # Load Cleaned Dataframe
+SafeType = function (url){
+	tryCatch({type = gsub('www.cato.org*/|/.*', "\\1", url)
+	type = gsub('-', " ", type)
+	type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
+	type_2 = gsub('-', " ", type_2)
+	type=ifelse((type=="publications"), type_2, type)
+	type=toTitleCase(type)
+	return(type)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
-df_intermediate = merge(xml_match,df2, by.x = 'pageTitle',by.y ='pageTitle',all.y=T, no.dups = T)
+bigURL = unique(df_clean$pagePath)
+bigURLsplit = split(bigURL, ceiling(seq_along(bigURL)/5000))
+split1=bigURLsplit[[1]];type1=pbmclapply(split1,SafeType,mc.preschedule=T);save(type1,file="type1.RData");rm(split1) 
+split2=bigURLsplit[[2]];type2=pbmclapply(split2,SafeType,mc.preschedule=T);save(type2,file="type2.RData");rm(split2)
+split3=bigURLsplit[[3]];type3=pbmclapply(split3,SafeType,mc.preschedule=T);save(type3,file="type3.RData");rm(split3)
+split4=bigURLsplit[[4]];type4=pbmclapply(split4,SafeType,mc.preschedule=T);save(type4,file="type4.RData");rm(split4)
+split5=bigURLsplit[[5]];type5=pbmclapply(split5,SafeType,mc.preschedule=T);save(type5,file="type5.RData");rm(split5)
+split6=bigURLsplit[[6]];type6=pbmclapply(split6,SafeType,mc.preschedule=T);save(type6,file="type6.RData");rm(split6)
+split7=bigURLsplit[[7]];type7=pbmclapply(split7,SafeType,mc.preschedule=T);save(type7,file="type7.RData");rm(split7)
+split8=bigURLsplit[[8]];type8=pbmclapply(split8,SafeType,mc.preschedule=T);save(type8,file="type8.RData");rm(split8)
+split9=bigURLsplit[[9]];type9=pbmclapply(split9,SafeType,mc.preschedule=T);save(type9,file="type9.RData");rm(split9)
+split10=bigURLsplit[[10]];type10=pbmclapply(split10,SafeType,mc.preschedule=T);save(type10,file="type10.RData");rm(split10)
+split11=bigURLsplit[[11]];type11=pbmclapply(split11,SafeType,mc.preschedule=T);save(type11,file="type11.RData");rm(split11)
+split12=bigURLsplit[[12]];type12=pbmclapply(split12,SafeType,mc.preschedule=T);save(type12,file="type12.RData");rm(split12)
+split13=bigURLsplit[[13]];type13=pbmclapply(split13,SafeType,mc.preschedule=T);save(type13,file="type13.RData");rm(split13)
+##########
+load(file="type1.RData");load(file="type2.RData");load(file="type3.RData");load(file="type4.RData");load(file="type5.RData");load(file="type6.RData");load(file="type7.RData");load(file="type8.RData");load(file="type9.RData");load(file="type10.RData");load(file="type11.RData");load(file="type12.RData");load(file="type13.RData")
+types_list=as.list(c(type1,type2,type3,type4,type5,type6,type7,type8,type9,type10,type11,type12,type13));rm(type1,type2,type3,type4,type5,type6,type7,type8,type9,type10,type11,type12,type13);
+types_list=trimws(types_list);
+Typematch_df=as.data.frame(cbind(pagePath=bigURL, Type=types_list))
+type_table=sort(table((Typematch_df$Type)),decreasing=TRUE)[1:50];print(type_table)
+Typematch_df$Type=as.character(Typematch_df$Type)
+Typematch_df$Type=ifelse(Typematch_df$Type=='Catos Letter', 'Catos Letters', ifelse(	
+Typematch_df$Type=="Events"|Typematch_df$Type=="Multimedia"|Typematch_df$Type=="Commentary"|Typematch_df$Type=="Policy Analysis"|Typematch_df$Type=="Blog"|Typematch_df$Type=="Policy Report"|Typematch_df$Type=="Congressional Testimony"|Typematch_df$Type=="Legal Briefs"|Typematch_df$Type=="Cato Journal"|Typematch_df$Type=="Research Briefs Economic Policy"|Typematch_df$Type=="Speeches"|Typematch_df$Type=="Free Trade Bulletin"|Typematch_df$Type=="Briefing Paper"|Typematch_df$Type=="Techknowledge"|Typematch_df$Type=="Cato Online Forum"|Typematch_df$Type=="Foreign Policy Briefing"|	Typematch_df$Type=="Testimony"|Typematch_df$Type=="White Paper"|Typematch_df$Type=="Trade Briefing Paper"|Typematch_df$Type=="Working Paper"|Typematch_df$Type=="Trade Policy Analysis"|Typematch_df$Type=="Briefing Paper"|Typematch_df$Type=="Cato Handbook Policymakers"|Typematch_df$Type=="Social Security Choice Paper"|Typematch_df$Type=="Tax Budget Bulletin"|Typematch_df$Type=="Trade Briefing Paper"|Typematch_df$Type=="Economic Development Bulletin"|Typematch_df$Type=="Supreme Court Review"|Typematch_df$Type=="Public Comments"|Typematch_df$Type=="Immigration Research Policy Brief"|Typematch_df$Type=="Foreign Policy Briefing"|Typematch_df$Type=="Publications"|Typematch_df$Type=="Survey Reports"|Typematch_df$Type=="Development Policy Analysis"|Typematch_df$Type=="Catos Letters"|Typematch_df$Type=="Immigration Reform Bulletin"|Typematch_df$Type=="Cato Online Forum", as.character(Typematch_df$Type), "Other"))
 
-############# Save Split-Apply-Combine #################
+df_clean_type=merge(df_clean, Typematch_df, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+save(df_clean_type, file = "df_clean_type.RData")
+
+#################################################################################
+################# Begin Module 6: Scrape Cato Publication Dates #################
+#################################################################################
+load(file = "df_clean_type.RData")
+
+SafeDate = function (url){
+	tryCatch({
+	doc=getURLContent(url)
+	doc = htmlParse(doc)
+	pub_date = xpathSApply(doc, "//meta[@name='publication_date'][1]",xmlGetAttr,'content')
+	Sys.sleep(.05)
+	return(pub_date)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
+
+df_clean_type$pagePath=gsub(".*www.","https://www.",df_clean_type$pagePath)
+bigURL = unique(df_clean_type$pagePath)
+bigURLsplit = split(bigURL, ceiling(seq_along(bigURL)/5000))
+split1=bigURLsplit[[1]];Date1=pbmclapply(split1,SafeDate,mc.preschedule=T);save(Date1,file="Date1.RData");rm(split1)
+split2=bigURLsplit[[2]];Date2=pbmclapply(split2,SafeDate,mc.preschedule=T);save(Date2,file="Date2.RData");rm(split2)
+split3=bigURLsplit[[3]];Date3=pbmclapply(split3,SafeDate,mc.preschedule=T);save(Date3,file="Date3.RData");rm(split3)
+split4=bigURLsplit[[4]];Date4=pbmclapply(split4,SafeDate,mc.preschedule=T);save(Date4,file="Date4.RData");rm(split4)
+split5=bigURLsplit[[5]];Date5=pbmclapply(split5,SafeDate,mc.preschedule=T);save(Date5,file="Date5.RData");rm(split5)
+split6=bigURLsplit[[6]];Date6=pbmclapply(split6,SafeDate,mc.preschedule=T);save(Date6,file="Date6.RData");rm(split6)
+split7=bigURLsplit[[7]];Date7=pbmclapply(split7,SafeDate,mc.preschedule=T);save(Date7,file="Date7.RData");rm(split7)
+split8=bigURLsplit[[8]];Date8=pbmclapply(split8,SafeDate,mc.preschedule=T);save(Date8,file="Date8.RData");rm(split8)
+split9=bigURLsplit[[9]];Date9=pbmclapply(split9,SafeDate,mc.preschedule=T);save(Date9,file="Date9.RData");rm(split9)
+split10=bigURLsplit[[10]];Date10=pbmclapply(split10,SafeDate,mc.preschedule=T);save(Date10,file="Date10.RData");rm(split10)
+split11=bigURLsplit[[11]];Date11=pbmclapply(split11,SafeDate,mc.preschedule=T);save(Date11,file="Date11.RData");rm(split11)
+split12=bigURLsplit[[12]];Date12=pbmclapply(split12,SafeDate,mc.preschedule=T);save(Date12,file="Date12.RData");rm(split12)
+##########
+load(file="Date1.RData");load(file="Date2.RData");load(file="Date3.RData");load(file="Date4.RData");load(file="Date5.RData");load(file="Date6.RData");load(file="Date7.RData");load(file="Date8.RData");load(file="Date9.RData");load(file="Date10.RData");load(file="Date11.RData");load(file="Date12.RData");
+Dates_list=as.list(c(Date1,Date2,Date3,Date4,Date5,Date6,Date7,Date8,Date9,Date10,Date11,Date12));rm(Date1,Date2,Date3,Date4,Date5,Date6,Date7,Date8,Date9,Date10,Date11,Date12);
+date_df=as.data.frame(cbind(pagePath=bigURL, pub_date=Dates_list))
+df_clean_type_date=merge(df_clean_type, date_df, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+df_clean_type_date$working_date=sapply(df_clean_type_date$pub_date, function(x) !all(is.na(as.Date(as.character(x),format="%Y/%m/%d"))))
+df_clean_type_date$pub_date=ifelse(df_clean_type_date$working_date==F, NA, df_clean_type_date$pub_date)
+#unique(df_clean_type_date$pub_date[1]) 
+save(df_clean_type_date, file = "df_clean_type_date.RData")
+rm(bigURL,bigURLsplit,df_clean_type,Dates_list,SafeDate,date_df)
+#################################################################################
+############## Begin Module 7: Scrape Cato Text Information Dates ##############
+#################################################################################
+load(file = "df_clean_type_date.RData")
+
+SafeBody = function (url){
+	tryCatch({
+	doc=getURLContent(url)
+	doc = htmlParse(doc)
+	body = xpathSApply(doc, "//div[@class='field-body'][1]", xmlValue)
+	body =  gsub('\nNotes\n.*', '', body)
+	body =  gsub("\n", ' ', body)
+	body=trimws(body)
+	Sys.sleep(.05)
+	return(body)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
+
+working_articles=subset(df_clean_type_date, working_date==T)
+bigURL = unique(working_articles$pagePath)
+bigURLsplit = split(bigURL, ceiling(seq_along(bigURL)/5000))
+split1=bigURLsplit[[1]];Body1=pbmclapply(split1,SafeBody,mc.preschedule=T);save(Body1,file="Body1.RData");rm(split1)
+split2=bigURLsplit[[2]];Body2=pbmclapply(split2,SafeBody,mc.preschedule=T);save(Body2,file="Body2.RData");rm(split2)
+split3=bigURLsplit[[3]];Body3=pbmclapply(split3,SafeBody,mc.preschedule=T);save(Body3,file="Body3.RData");rm(split3)
+split4=bigURLsplit[[4]];Body4=pbmclapply(split4,SafeBody,mc.preschedule=T);save(Body4,file="Body4.RData");rm(split4)
+split5=bigURLsplit[[5]];Body5=pbmclapply(split5,SafeBody,mc.preschedule=T);save(Body5,file="Body5.RData");rm(split5)
+split6=bigURLsplit[[6]];Body6=pbmclapply(split6,SafeBody,mc.preschedule=T);save(Body6,file="Body6.RData");rm(split6)
+split7=bigURLsplit[[7]];Body7=pbmclapply(split7,SafeBody,mc.preschedule=T);save(Body7,file="Body7.RData");rm(split7)
+split8=bigURLsplit[[8]];Body8=pbmclapply(split8,SafeBody,mc.preschedule=T);save(Body8,file="Body8.RData");rm(split8)
+split9=bigURLsplit[[9]];Body9=pbmclapply(split9,SafeBody,mc.preschedule=T);save(Body9,file="Body9.RData");rm(split9)
+split10=bigURLsplit[[10]];Body10=pbmclapply(split10,SafeBody,mc.preschedule=T);save(Body10,file="Body10.RData");rm(split10)
+split11=bigURLsplit[[11]];Body11=pbmclapply(split11,SafeBody,mc.preschedule=T);save(Body11,file="Body11.RData");rm(split11)
+##########
+load(file="Body1.RData");load(file="Body2.RData");load(file="Body3.RData");load(file="Body4.RData");load(file="Body5.RData");load(file="Body6.RData");load(file="Body7.RData");load(file="Body8.RData");load(file="Body9.RData");load(file="Body10.RData");load(file="Body11.RData");
+Bodys_list=as.list(c(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11));rm(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11);
+Body_df=as.data.frame(cbind(pagePath=bigURL, pub_Body=Bodys_list))
+
+body_vector = pbmclapply(text_responses, function (filename) {
+	doc = htmlParse(filename)
+	body = xpathSApply(doc, "//div[@class='field-body'][1]", xmlValue)
+	body =  gsub('\nNotes\n.*', '', body)
+	body =  gsub("\n", ' ', body)
+	body=trimws(body)})
+
+body_count=pbmclapply(gregexpr("[[:alpha:]]+", body_vector), function(x) sum(x > 0))
+
+
+### Date
+# bigURL = unique(df_clean_type$pagePath)
+# bigURLsplit = split(bigURL, ceiling(seq_along(bigURL)/5000))
+# split1=bigURLsplit[[1]];Date1=pbmclapply(split1,SafeDate,mc.preschedule=T);save(Date1,file="Date1.RData");rm(split1) 
+# split2=bigURLsplit[[2]];Date2=pbmclapply(split2,SafeDate,mc.preschedule=T);save(Date2,file="Date2.RData");rm(split2)
+# split3=bigURLsplit[[3]];Date3=pbmclapply(split3,SafeDate,mc.preschedule=T);save(Date3,file="Date3.RData");rm(split3)
+# split4=bigURLsplit[[4]];Date4=pbmclapply(split4,SafeDate,mc.preschedule=T);save(Date4,file="Date4.RData");rm(split4)
+# split5=bigURLsplit[[5]];Date5=pbmclapply(split5,SafeDate,mc.preschedule=T);save(Date5,file="Date5.RData");rm(split5)
+# split6=bigURLsplit[[6]];Date6=pbmclapply(split6,SafeDate,mc.preschedule=T);save(Date6,file="Date6.RData");rm(split6)
+# split7=bigURLsplit[[7]];Date7=pbmclapply(split7,SafeDate,mc.preschedule=T);save(Date7,file="Date7.RData");rm(split7)
+# split8=bigURLsplit[[8]];Date8=pbmclapply(split8,SafeDate,mc.preschedule=T);save(Date8,file="Date8.RData");rm(split8)
+# split9=bigURLsplit[[9]];Date9=pbmclapply(split9,SafeDate,mc.preschedule=T);save(Date9,file="Date9.RData");rm(split9)
+# split10=bigURLsplit[[10]];Date10=pbmclapply(split10,SafeDate,mc.preschedule=T);save(Date10,file="Date10.RData");rm(split10)
+# split11=bigURLsplit[[11]];Date11=pbmclapply(split11,SafeDate,mc.preschedule=T);save(Date11,file="Date11.RData");rm(split11)
+# split12=bigURLsplit[[12]];Date12=pbmclapply(split12,SafeDate,mc.preschedule=T);save(Date12,file="Date12.RData");rm(split12)
+# split13=bigURLsplit[[13]];Date13=pbmclapply(split13,SafeDate,mc.preschedule=T);save(Date13,file="Date13.RData");rm(split13)
+# ##########
+load(file="Date1.RData");load(file="Date2.RData");load(file="Date3.RData");load(file="Date4.RData");load(file="Date5.RData");load(file="Date6.RData");load(file="Date7.RData");load(file="Date8.RData");load(file="Date9.RData");load(file="Date10.RData");load(file="Date11.RData");load(file="Date12.RData");load(file="Date13.RData")
+Dates_list=as.list(c(Date1,Date2,Date3,Date4,Date5,Date6,Date7,Date8,Date9,Date10,Date11,Date12,Date13));rm(Date1,Date2,Date3,Date4,Date5,Date6,Date7,Date8,Date9,Date10,Date11,Date12,Date13);
+# Dates_list=trimws(Dates_list);
+# Datematch_df=as.data.frame(cbind(pagePath=bigURL, Date=Dates_list))
+# Date_table=sort(table((Datematch_df$Date)),decreasing=TRUE)[1:50];print(Date_table)
+# Datematch_df$Date=as.character(Datematch_df$Date)
 
 
 #### Get Title ####
-type_list=pbmclapply(url_list, function(url){type = gsub('www.cato.org*/|/.*', "\\1", url)
-type = gsub('-', " ", type)
-type_2 = gsub('www.cato.org/publications*/|/.*', "\\1", url)
-type_2 = gsub('-', " ", type_2)
-type=ifelse((type=="publications"), type_2, type)})
 
 type_df=data.frame(cbind(type=type_list))
 type_df=as.data.frame(cbind(type=type_list, pagePath=url_vector))
 type_df_full=as.data.frame(cbind(pagePath=url_vector_full))
 linked_type= merge(type_df_full, type_df, by=('pagePath'), all.x=T)
 linked_type=unique(linked_type)
-df_intermediate=merge(df_intermediate, linked_type, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 df_intermediate$type = unlist(df_intermediate$type)
 
 
@@ -380,9 +521,6 @@ linked_title=unique(linked_title)
 df_intermediate = merge(df1, linked_title, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
 save(df_intermediate, file = "df_intermediate.RData")
 
-#########################################################################
-################# Begin Module 5: Scrape Cato Web Data ##################
-#########################################################################
 load(file = "df_intermediate.RData")
 
 title_vector_dfi=df_intermediate[["title"]]
