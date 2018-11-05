@@ -412,7 +412,7 @@ SafeBody = function (url){
 	body =  gsub('\nNotes\n.*', '', body)
 	body =  gsub("\n", ' ', body)
 	body=trimws(body)
-	Sys.sleep(.05)
+	Sys.sleep(.01)
 	return(body)},
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
@@ -433,16 +433,23 @@ split11=bigURLsplit[[11]];Body11=pbmclapply(split11,SafeBody,mc.preschedule=T);s
 ##########
 load(file="Body1.RData");load(file="Body2.RData");load(file="Body3.RData");load(file="Body4.RData");load(file="Body5.RData");load(file="Body6.RData");load(file="Body7.RData");load(file="Body8.RData");load(file="Body9.RData");load(file="Body10.RData");load(file="Body11.RData");
 Bodys_list=as.list(c(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11));rm(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11);
-Body_df=as.data.frame(cbind(pagePath=bigURL, pub_Body=Bodys_list))
+Body_df=as.data.frame(cbind(pagePath=bigURL, pub_body=Bodys_list))
+body_vector=as.list(Body_df$pub_body)
+SafeBody_Count = function (text){tryCatch({
+	bcount=gregexpr("[[:alpha:]]+", text)
+	bcount=Reduce("+",bcount)/length(bcount)
+	bcount=sum(bcount > 0)
+	return(bcount)},
+	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
-body_vector = pbmclapply(text_responses, function (filename) {
-	doc = htmlParse(filename)
-	body = xpathSApply(doc, "//div[@class='field-body'][1]", xmlValue)
-	body =  gsub('\nNotes\n.*', '', body)
-	body =  gsub("\n", ' ', body)
-	body=trimws(body)})
-
-body_count=pbmclapply(gregexpr("[[:alpha:]]+", body_vector), function(x) sum(x > 0))
+body_count=pbmclapply(body_vector, SafeBody_Count, mc.preschedule=T)
+Body_df_c=as.data.frame(cbind(pagePath=bigURL, pub_Body=Bodys_list, body_count=body_count))
+df_clean_type_date_body=merge(df_clean_type_date,Body_df_c, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+save(df_clean_type_date_body, file = "df_clean_type_date_body.RData")
+rm(bigURL,bigURLsplit,df_clean_type_date,SafeBody_Count,SafeBody,working_articles,Body_df,Body_df_c,Bodys_list,body_vector,body_count)
+#################################################################################
+####################### Begin Module 8: Final Tweaks ############################
+#################################################################################
 
 
 ### Date
