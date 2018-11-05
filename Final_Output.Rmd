@@ -9,12 +9,15 @@ output: pdf_document
 
 ```{r, include=FALSE}
 # Open Data
-setwd('/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)')
+#setwd('/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)/')
 
-load( file = "VaBrCa(0614-0618).RData")
+load( file = '/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)/df_clean_type_date_body.RData')
 #noTerror.RData
-load( file = "save_docs(Calder).RData")
+#load( file = "save_docs(Calder).RData")
 #Load Dependencies
+df_final=df_clean_type_date_body
+rm(df_clean_type_date_body)
+names(df_final)
 library(tinytex)
 library(wordcloud)
 library(topicmodels)

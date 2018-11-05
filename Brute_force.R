@@ -432,9 +432,9 @@ split10=bigURLsplit[[10]];Body10=pbmclapply(split10,SafeBody,mc.preschedule=T);s
 split11=bigURLsplit[[11]];Body11=pbmclapply(split11,SafeBody,mc.preschedule=T);save(Body11,file="Body11.RData");rm(split11)
 ##########
 load(file="Body1.RData");load(file="Body2.RData");load(file="Body3.RData");load(file="Body4.RData");load(file="Body5.RData");load(file="Body6.RData");load(file="Body7.RData");load(file="Body8.RData");load(file="Body9.RData");load(file="Body10.RData");load(file="Body11.RData");
-Bodys_list=as.list(c(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11));rm(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11);
-Body_df=as.data.frame(cbind(pagePath=bigURL, pub_body=Bodys_list))
-body_vector=as.list(Body_df$pub_body)
+bodys_list=as.list(c(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11));rm(Body1,Body2,Body3,Body4,Body5,Body6,Body7,Body8,Body9,Body10,Body11);
+body_df=as.data.frame(cbind(pagePath=bigURL, pub_body=bodys_list))
+body_vector=as.list(body_df$pub_body)
 SafeBody_Count = function (text){tryCatch({
 	bcount=gregexpr("[[:alpha:]]+", text)
 	bcount=Reduce("+",bcount)/length(bcount)
@@ -443,13 +443,57 @@ SafeBody_Count = function (text){tryCatch({
 	error=function(e){cat("ERROR :", conditionMessage(e))}, '0')}
 
 body_count=pbmclapply(body_vector, SafeBody_Count, mc.preschedule=T)
-Body_df_c=as.data.frame(cbind(pagePath=bigURL, pub_Body=Bodys_list, body_count=body_count))
-df_clean_type_date_body=merge(df_clean_type_date,Body_df_c, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+body_df_c=as.data.frame(cbind(pagePath=bigURL, body=bodys_list, body_count=body_count))
+df_clean_type_date_body=merge(df_clean_type_date,body_df_c, by.x = 'pagePath', by.y = 'pagePath', all.x=T)
+df_clean_type_date_body$title=df_clean_type_date_body$pageTitle
+df_clean_type_date_body$pageTitle=NULL
 save(df_clean_type_date_body, file = "df_clean_type_date_body.RData")
-rm(bigURL,bigURLsplit,df_clean_type_date,SafeBody_Count,SafeBody,working_articles,Body_df,Body_df_c,Bodys_list,body_vector,body_count)
+rm(bigURL,bigURLsplit,df_clean_type_date,SafeBody_Count,SafeBody,working_articles,body_df,body_df_c,bodys_list,body_vector,body_count)
+#text_df=data.frame(cbind(body=body_vector,body_count=body_count,topics=topics_output,tags=tags_output,pub_date=pub_date_output))
+
+###########################################################################
+################## Text Analysis - Generate Text Wall #####################
+###########################################################################
+load(file = "df_clean_type_date_body.RData")
+names(df_clean_type_date_body)
+text_wall=df_clean_type_date_body %>%
+	distinct(title, body)
+text_wall=text_wall[!duplicated(text_wall),]
+text_wall=text_wall[(text_wall$title)!='NA',]
+text_wall=text_wall[(text_wall$body)!='NA',]
+
+for(i in 1:nrow(text_wall)){
+if (i==1){save_docs=paste(text_wall$title[i],text_wall$body[i])}
+	else{save_docs = paste(save_docs,text_wall$title[i],text_wall$body[i])}}
+
+library(tm)
+library(wordcloud)
+library(topicmodels)
+library(quanteda)
+toSpace=content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+toNothing=content_transformer(function (x , pattern ) gsub(pattern, "", x))
+
+doc=Corpus(VectorSource(save_docs))
+doc=tm_map(doc, removeNumbers)
+doc=tm_map(doc, tolower)
+doc=tm_map(doc, stripWhitespace)
+doc=tm_map(doc, removePunctuation)
+doc=tm_map(doc, PlainTextDocument)
+doc=tm_map(doc, toSpace, "/")
+doc=tm_map(doc, toSpace, "@")
+doc=tm_map(doc, toSpace, "\\|")
+doc=tm_map(doc, toNothing, "-")
+doc=tm_map(doc, toNothing, "—")
+doc=tm_map(doc, toNothing, "–")
+doc=tm_map(doc, removeWords, stopwords("english"))
+doc=tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one', 'NA', 'immigrants', 'will'))
+
+
 #################################################################################
 ####################### Begin Module 8: Final Tweaks ############################
 #################################################################################
+
+
 
 
 ### Date
