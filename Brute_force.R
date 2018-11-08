@@ -456,44 +456,50 @@ rm(bigURL,bigURLsplit,df_clean_type_date,SafeBody_Count,SafeBody,working_article
 ###########################################################################
 load(file = "df_clean_type_date_body.RData")
 names(df_clean_type_date_body)
-text_wall=df_clean_type_date_body %>%
-	distinct(title, body)
+text_wall=df_clean_type_date_body %>% distinct(title, body)
 text_wall=text_wall[!duplicated(text_wall),]
-text_wall=text_wall[(text_wall$title)!='NA',]
-text_wall=text_wall[(text_wall$body)!='NA',]
-
-for(i in 1:nrow(text_wall)){
-if (i==1){save_docs=paste(text_wall$title[i],text_wall$body[i])}
-	else{save_docs = paste(save_docs,text_wall$title[i],text_wall$body[i])}}
-
-library(tm)
-library(wordcloud)
-library(topicmodels)
-library(quanteda)
+text_wall=text_wall[(text_wall$title)!='NA',];text_wall=text_wall[(text_wall$body)!='NA',]
+text_wall$body=as.character(text_wall$body);text_wall$title=as.character(text_wall$title)
+big_text_wall <- paste(text_wall$title,text_wall$body);rm(df_clean_type_date_body)
+library(tm);library(wordcloud);library(topicmodels);library(quanteda)
 toSpace=content_transformer(function (x , pattern ) gsub(pattern, " ", x))
 toNothing=content_transformer(function (x , pattern ) gsub(pattern, "", x))
+big_text_wall=pbmclapply(big_text_wall, removeWords, stopwords("english"), mc.preschedule=T)
+big_text_wall=pbmclapply(big_text_wall, removeNumbers, mc.preschedule=T)
+big_text_wall=pbmclapply(big_text_wall, tolower, mc.preschedule=T)
+big_text_wall=pbmclapply(big_text_wall, removeWords, c("the", "can",'did','like', 'and', 'null', 'one', 'NA','character','list', 'immigrants','118', '399', 'much','this', 'but','also',"'s", "datetimestamp", 'will',"hour","author","content",'description','heading', "sec",'origin','min','meta','get','see'), mc.preschedule=T)
+big_text_wall=pbmclapply(big_text_wall, toTitleCase, mc.preschedule=T)
+big_text_wall=pbmclapply(big_text_wall, stripWhitespace, mc.preschedule=T)
+save_docs=paste(big_text_wall, sep="", collapse="") 
+doc_text1=VCorpus(VectorSource(save_docs))
+	doc_text1=tm_map(doc_text1, toSpace, "/")
+	doc_text1=tm_map(doc_text1, toSpace, "@")
+	doc_text1=tm_map(doc_text1, toSpace, "\\|")
+	doc_text1=tm_map(doc_text1, toNothing, "-")
+	doc_text1=tm_map(doc_text1, toNothing, "—")
+	doc_text1=tm_map(doc_text1, toNothing, "–")
+	doc_text1=tm_map(doc_text1, PlainTextDocument)
+	doc_text1=tm_map(doc_text1, removePunctuation)
+	doc_text=tm_map(doc_text1, stripWhitespace)
 
-doc=Corpus(VectorSource(save_docs))
-doc=tm_map(doc, removeNumbers)
-doc=tm_map(doc, tolower)
-doc=tm_map(doc, stripWhitespace)
-doc=tm_map(doc, removePunctuation)
-doc=tm_map(doc, PlainTextDocument)
-doc=tm_map(doc, toSpace, "/")
-doc=tm_map(doc, toSpace, "@")
-doc=tm_map(doc, toSpace, "\\|")
-doc=tm_map(doc, toNothing, "-")
-doc=tm_map(doc, toNothing, "—")
-doc=tm_map(doc, toNothing, "–")
-doc=tm_map(doc, removeWords, stopwords("english"))
-doc=tm_map(doc, removeWords, c("the", "can",'did','like', 'and', 'null', 'one', 'NA', 'immigrants', 'will'))
+save(doc_text,file="doc_text.RData")
 
+rm(df_clean_type_date_body,text_wall,toNothing,toSpace,big_text_wall,doc_text,save_docs,doc_text1)
 
 #################################################################################
 ####################### Begin Module 8: Final Tweaks ############################
 #################################################################################
+load(file = "df_clean_type_date_body.RData")
 
+names(df_clean_type_date_body)
+df_final=df_clean_type_date_body
+rm(df_clean_type_date_body)
+df_final$type=df_final$Type
+df_final$Type=NULL
 
+names(df_final)
+save(df_final,file="df_final.RData")
+rm(df_final)
 
 
 ### Date

@@ -11,13 +11,9 @@ output: pdf_document
 # Open Data
 #setwd('/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)/')
 
-load( file = '/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)/df_clean_type_date_body.RData')
+load( file = '/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)/df_final.RData')
 #noTerror.RData
-#load( file = "save_docs(Calder).RData")
 #Load Dependencies
-df_final=df_clean_type_date_body
-rm(df_clean_type_date_body)
-names(df_final)
 library(tinytex)
 library(wordcloud)
 library(topicmodels)
@@ -57,9 +53,8 @@ current_date=ymd(current_date)
 #name="Vanessa Brown Calder"
 begin=min(df_final$obs_day)
 end=max(df_final$obs_day)
-name=df_final$author[1]
-name=as.character(name)
-name
+# name=df_final$author[1]
+# name=as.character(name)
 
 # Build file name
 from_s = (begin)
@@ -78,22 +73,24 @@ initials <- function(a, b){
 	paste0(unlist(a1), b) 
 }
 analysis_identifier=initials(name,analysis_range)
+library(ggrepel)
 
 
 ```
 
 
 ```{r echo=FALSE, fig.align="center"}
+load( file = "/Users/rorr/Desktop/Welfare_Policy/Data/Data_Explorations/Google_Analytics(Cato)/doc_text.RData")
+
 # creating of document matrix
 library(tm)
 library(wordcloud)
 library(topicmodels)
 library(quanteda)
-toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
-toNothing <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
 
-tdm <- TermDocumentMatrix(doc)
+tdm <- TermDocumentMatrix(doc_text)
 m <- as.matrix(tdm)
+
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
 
@@ -113,8 +110,8 @@ This is `r (name)`'s web analytics report from between the dates `r (begin)` and
 Colored by topic between the dates `r (begin)` and `r (end)`.
 
 ```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=6, fig.width=8}
-total_line =subset(df_final, type != "events"&type !="multimedia") # Remove events
-total_line=aggregate(sessions ~ title + author_categories + obs_day, total_line, sum)
+total_line =subset(df_final, type != "Events"&type !="Multimedia") # Remove events
+total_line=aggregate(sessions ~ title + obs_day + author_full, total_line, sum)
 total_line$big_day = paste0(total_line$title,"(",as.character(total_line$obs_day),")")
 
 title_big=aggregate(sessions~title+obs_day+big_day, total_line,function(x) x[which.max(abs(x))])
@@ -128,26 +125,37 @@ total_line=merge(total_line,title_numb, all.x=T)
 total_line$rank_unique = ifelse(total_line$rank_unique > 20, NA, total_line$rank_unique)
 total_line$rank_overall = ifelse(total_line$rank_overall > 20, NA, total_line$rank_overall)
 
-top_days=total_line %>%ggplot(aes(x=obs_day,y=sessions,group=author_categories,colour=author_categories))+geom_line()+
+top_days=total_line %>%ggplot(aes(x=obs_day,y=sessions,group=author_full,colour=author_full))+geom_line()+
 	theme(axis.text.x=element_text(angle=90,hjust = 1),legend.position="none")+my_theme()+
 	theme(legend.position="bottom", legend.box = "horizontal")+theme(legend.title=element_blank())+
 	scale_y_continuous(expand = c(0, .3))
-library(ggrepel)
 top_days + geom_label_repel(data = subset(total_line %>% group_by(title) %>% top_n(n=1, sessions))
-												    ,	aes(label=rank_unique), size=8)+ theme(legend.position = "None")   # label
+	,aes(label=rank_unique), size=8)+ theme(legend.position = "None")   # label
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=7, fig.width=6}
 library(knitr)
 library(kableExtra)
 
-total_table = subset(total_line, rank_unique < 16, select=-c(sessions, big_day, rank_unique)
-																					)
+total_table = subset(total_line, rank_unique < 16, select=-c(sessions, big_day, rank_unique))
 total_table %>% kable() %>%  kable_styling()
 
 ```
 
 \pagebreak
+**Authur totals**
+```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=7}
+media_type =subset(df_final, type != "events" & type != 'node')
+media_type<-media_type %>% distinct(author_full,title,sessions)
+media_type=aggregate(sessions ~ author_full, media_type, sum)
+ggplot(data=media_type, aes(x=reorder(author_full,sessions, function(x)sum(x)),y=sessions,colour=author_full) ) +
+	geom_bar(aes(fill = author_full),stat="identity",width=.4, position = "dodge")+coord_flip()+my_theme()+ 
+	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
+	scale_y_continuous(expand = c(.01, .3))+ geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 50))
+
+```
+\pagebreak
+
 
 **Popular Co-Authors for `r (name)` (Multimedia Excluded)**
 
@@ -178,6 +186,7 @@ pie_chart
 ```
 
 
+
 **Count of published content by `r (name)`, colored by co-authorship**
 
 Simple count of authored and co-authored content over course of Cato career.  
@@ -185,7 +194,7 @@ Simple count of authored and co-authored content over course of Cato career.
 ```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=4, fig.width=7}
 Bar_type_df =subset(df_final, type != "events" & type != 'node') #& co_authors == "Caleb Brown")
 																			 # Remove events
-Bar_type_df$collaboration_yn=ifelse(Bar_type_df$author!=Bar_type_df$author_full & length(Bar_type_df$author_full)!=0, "Co-Authored", ifelse(Bar_type_df$author==Bar_type_df$author_full, "Sole Author",0))
+Bar_type_df$collaboration_yn=ifelse(Bar_type_df$author_full!=Bar_type_df$author_full & length(Bar_type_df$author_full)!=0, "Co-Authored", ifelse(Bar_type_df$author==Bar_type_df$author_full, "Sole Author",0))
 Bar_type_df<-Bar_type_df %>% distinct(type,title,collaboration_yn,one)
 
 ggplot(data=Bar_type_df,aes(x=reorder(type,type, function(x)length(x)),y=one,fill=collaboration_yn))+
