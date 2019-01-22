@@ -72,7 +72,7 @@ initials <- function(a, b){
 	})
 	paste0(unlist(a1), b) 
 }
-analysis_identifier=initials(name,analysis_range)
+analysis_identifier=initials("ALL",analysis_range)
 library(ggrepel)
 
 
@@ -90,14 +90,20 @@ library(quanteda)
 
 tdm <- TermDocumentMatrix(doc_text)
 m <- as.matrix(tdm)
-
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
 
+d=subset(d, freq >= 9000)
+d$word=as.character(d$word)
+d$word=ifelse(d$word=='cato','cato institute',d$word)
+d$freq=ifelse(d$word=='cato institute',d$freq+200000,d$freq)
+words=as.vector(d$word)
+d$word=mclapply(words, toTitleCase, mc.preschedule = T)
+
 #head(d, 10)
 set.seed(12)
-wordcloud(words = d$word, freq = d$freq, min.freq = 30, max.words=100,random.order = FALSE, scale=c(2.1,.7), #res=300,
-										rot.per=.1,vfont=c("sans serif","plain"),colors=brewer.pal(8, "Dark2"))
+wordcloud(words = d$word, freq = d$freq, min.freq = 30, max.words=100,random.order = FALSE, scale=c(2.5,1), #res=300,
+	rot.per=.1,vfont=c("sans serif","plain"),colors=brewer.pal(8, "Dark2"))
 
 ```
 
@@ -145,10 +151,25 @@ total_table %>% kable() %>%  kable_styling()
 \pagebreak
 **Authur totals**
 ```{r, echo=FALSE, message=FALSE, warning = FALSE, fig.height=8, fig.width=7}
-media_type =subset(df_final, type != "events" & type != 'node')
-media_type<-media_type %>% distinct(author_full,title,sessions)
-media_type=aggregate(sessions ~ author_full, media_type, sum)
-ggplot(data=media_type, aes(x=reorder(author_full,sessions, function(x)sum(x)),y=sessions,colour=author_full) ) +
+authur_views =subset(df_final, type != "Events" & type != 'Node')
+authur_views<-authur_views %>% distinct(author_full,title,sessions)
+# [10 'Jeffrey A. Singer`    
+# [11 'Caroline Dorminey`     `Eric Gomez`            `John Samples`          `Emma Ashford`          `Daniel R. Pearson`    
+# [16 'Clark Neily`           `Roger Pilon`           `Corey A. DeAngelis`    `Chris Edwards`         `Dr. Steve Davies`     
+# [21 'Alan Reynolds`         `Vanessa Brown Calder`  `Simon Lester`          `Diego Zuluaga`         `Patrick J. Michaels`  
+# [26 'George Selgin`         `Michael D. Tanner`     `Johan Norberg`         `Neal McCluskey`        `Ryan Bourne`          
+# [31 'David Bier`            `Mustafa Akyol`         `Patrick G. Eddington`  `Jason Kuznicki`        `John Glaser`          
+# [36 'Dan Lips`              `Scott Lincicome`       `Alex Nowrasteh`        `Michael F. Cannon`     `Christopher A. Preble`
+# [41 'A. Trevor Thrall`      `Ike Brannon`           `José Piñera`           `Ian Vásquez`           `Colin Grabow`         
+# [46 'Doug Bandow`           `David Boaz`            `Gabriel Latner`        `Emily Ekins`           `Jeffrey Miron`        
+# [51 'Juan Carlos Hidalgo`   `Tate Lacey`            `Randal O'Toole`        `Dick Komer`            `Trevor Burrus`        
+# [56 'Tom G. Palmer`         `Ilya Shapiro`          `Daniel J. Ikenson`     `Gene Healy`            `Walter Olson`         
+# [61 'Julian Sanchez`        `Aaron Ross Powell`
+
+# (`Jeffrey A. Singer`,`Caroline Dorminey`, `Eric Gomez`, `John Samples`, `Emma Ashford`, `Daniel R. Pearson`, `Clark Neily`, `Roger Pilon`, `Corey A. DeAngelis`, `Chris Edwards`, `Dr. Steve Davies`, `Alan Reynolds`, `Vanessa Brown Calder` , `Simon Lester`, `Diego Zuluaga`, `Patrick J. Michaels`, `George Selgin`, `Michael D. Tanner`, `Johan Norberg`, `Neal McCluskey`, `Ryan Bourne`, `David Bier`, `Mustafa Akyol`, `Patrick G. Eddington` , `Jason Kuznicki`, `John Glaser`, `Dan Lips`, `Scott Lincicome`, `Alex Nowrasteh`, `Michael F. Cannon`, `Christopher A. Preble`,`A. Trevor Thrall`, `Ike Brannon`, `José Piñera`, `Ian Vásquez`, `Colin Grabow`, `Doug Bandow`, `David Boaz`, `Gabriel Latner`, `Emily Ekins`, `Jeffrey Miron`, `Juan Carlos Hidalgo`, `Tate Lacey`, `Randal O'Toole`, `Dick Komer`, `Trevor Burrus`, `Tom G. Palmer`, `Ilya Shapiro`, `Daniel J. Ikenson`, `Gene Healy`, `Walter Olson`, `Julian Sanchez`, `Aaron Ross Powell` , other_authur)
+
+authur_views=aggregate(sessions ~ author_full, authur_views, sum)
+ggplot(data=authur_views, aes(x=reorder(author_full,sessions, function(x)sum(x)),y=sessions,colour=author_full) ) +
 	geom_bar(aes(fill = author_full),stat="identity",width=.4, position = "dodge")+coord_flip()+my_theme()+ 
 	theme(legend.position="bottom",  legend.box = "horizontal")+theme(legend.title=element_blank()) +
 	scale_y_continuous(expand = c(.01, .3))+ geom_text(aes(label=sessions, label.size = 1), color ="#000000",vjust=0, hjust=(-0.5), position=position_fill()) +scale_x_discrete(labels = function(x) str_wrap(x, width = 50))
